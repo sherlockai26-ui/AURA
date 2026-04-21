@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 180" role="img" aria-label="AURA">
+  <defs>
+    <linearGradient id="aura-stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c084fc"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <filter id="aura-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g fill="none" stroke="url(#aura-stroke)" stroke-width="2.2" stroke-linejoin="round" filter="url(#aura-glow)">
+    <polygon points="100,15 185,165 15,165"/>
+    <polygon points="100,60 140,135 60,135"/>
+    <line x1="100" y1="15" x2="100" y2="135"/>
+    <line x1="15" y1="165" x2="140" y2="135"/>
+    <line x1="185" y1="165" x2="60" y2="135"/>
+    <line x1="60" y1="135" x2="140" y2="135"/>
+  </g>
+</svg>
