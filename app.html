@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>AURA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#05030a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-small">
+        <object type="image/svg+xml" data="./assets/logo.svg" aria-label="AURA"></object>
+        <span>AURA</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost btn-sm" id="install-btn-inline" hidden>+ Acceso directo</button>
+        <div class="avatar" id="avatar-me" title="Tu avatar">?</div>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Salir</button>
+      </div>
+    </header>
+
+    <nav class="tabbar" role="tablist" aria-label="Navegación principal">
+      <button data-view="feed" class="active"><span class="icon">❖</span><span>FEED</span></button>
+      <button data-view="chat"><span class="icon">✦</span><span>CHAT</span></button>
+      <button data-view="profile"><span class="icon">△</span><span>PERFIL</span></button>
+      <button data-view="settings"><span class="icon">◌</span><span>AJUSTES</span></button>
+    </nav>
+
+    <main class="main-area">
+      <!-- FEED -->
+      <section id="view-feed" class="view">
+        <div class="card composer">
+          <h3>Publicar en el feed de pareja</h3>
+          <div class="stack">
+            <div class="field textarea">
+              <textarea id="post-text" placeholder=" " rows="3"></textarea>
+              <label for="post-text">¿Qué quieren compartir juntos?</label>
+            </div>
+            <div class="row">
+              <span class="small muted grow">Todo lo que publiquen aquí es público en su perfil de pareja.</span>
+              <button class="btn btn-primary" id="post-btn" style="width: auto; padding: 10px 22px; min-height: 44px;">PUBLICAR</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="feed-list" class="stack" style="margin-top: 16px;"></div>
+      </section>
+
+      <!-- CHAT -->
+      <section id="view-chat" class="view hidden">
+        <div class="card">
+          <h3>Modos de conversación</h3>
+          <p class="muted small" style="margin: -4px 0 10px;">Elige cómo conversar. Las 3 opciones están siempre disponibles.</p>
+          <div class="mode-switch" role="tablist" aria-label="Modo de chat">
+            <button data-mode="couple" class="active">Chat de pareja</button>
+            <button data-mode="group">Grupo de 4 (las 2 parejas)</button>
+            <button data-mode="direct">Mensajes individuales</button>
+          </div>
+        </div>
+
+        <div class="card" id="chat-list-card">
+          <div id="chat-list" class="chat-list stack" style="gap: 4px;"></div>
+        </div>
+
+        <div class="card chat-window hidden" id="chat-window">
+          <div class="chat-head">
+            <div class="avatar" id="chat-peer-avatar">?</div>
+            <div>
+              <div id="chat-peer-name" style="font-weight: 600;">—</div>
+              <div class="small muted" id="chat-peer-sub">—</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="margin-left: auto; width: auto;" id="chat-back">Volver</button>
+          </div>
+          <div class="chat-msgs" id="chat-msgs"></div>
+          <form class="chat-input" id="chat-form">
+            <input id="chat-input" placeholder="Escribe un mensaje..." autocomplete="off" />
+            <button class="btn btn-primary" type="submit">Enviar</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section id="view-profile" class="view hidden">
+        <div class="profile-hero">
+          <div class="couple-avatars">
+            <div class="avatar lg" id="profile-av-1">?</div>
+            <div class="avatar lg" id="profile-av-2">?</div>
+          </div>
+          <div class="hero-meta">
+            <div class="h-name" id="profile-name">—</div>
+            <div class="h-handle" id="profile-handle">@—</div>
+            <div class="h-since" id="profile-since">Juntos en AURA</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 14px;">
+          <h3>Biografía de pareja</h3>
+          <div class="field textarea">
+            <textarea id="profile-bio" placeholder=" " rows="3"></textarea>
+            <label for="profile-bio">Cuenten su historia</label>
+          </div>
+          <div class="row" style="justify-content: flex-end;">
+            <button class="btn btn-primary" id="save-bio" style="width: auto; padding: 10px 20px; min-height: 42px;">Guardar</button>
+          </div>
+          <p class="small muted" style="margin-top: 6px;">Los cambios importantes requieren código SMS de ambos.</p>
+        </div>
+
+        <div class="card">
+          <h3>Espacios personales</h3>
+          <p class="muted small" style="margin: -4px 0 12px;">Cada uno gestiona su propio espacio. Solo el feed es compartido.</p>
+          <div class="spaces">
+            <div class="space me">
+              <h4 id="space-me-name">—</h4>
+              <p id="space-me-bio">Personaliza tu espacio privado</p>
+              <button class="btn btn-ghost btn-sm" style="margin-top: 10px;" data-edit-space="me">Editar</button>
+            </div>
+            <div class="space partner">
+              <h4 id="space-partner-name">—</h4>
+              <p id="space-partner-bio">Espacio privado de tu pareja</p>
+              <button class="btn btn-ghost btn-sm" style="margin-top: 10px;" data-edit-space="partner">Editar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="view hidden">
+        <div class="card">
+          <h3>Acceso directo</h3>
+          <p class="muted small">Instala AURA como app en tu teléfono o PC para usarla desde la pantalla de inicio sin navegador.</p>
+          <button class="btn btn-outline" id="install-btn-settings">Crear acceso directo</button>
+          <p class="small muted" id="install-hint" style="margin-top: 8px;"></p>
+        </div>
+
+        <div class="card">
+          <h3>Sesión</h3>
+          <p class="muted small">Identidad activa: <span id="who-am-i">—</span></p>
+          <div class="row">
+            <button class="btn btn-ghost" id="switch-member">Cambiar de integrante</button>
+            <button class="btn btn-outline" id="logout-btn-2">Cerrar sesión</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Seguridad</h3>
+          <ul class="muted small" style="padding-left: 18px; line-height: 1.8;">
+            <li>Conexión E2E activa.</li>
+            <li>Cambios críticos (correo, contraseña, eliminar perfil): doble SMS.</li>
+            <li>Datos locales cifrados por el navegador.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast-root"></div>
+
+  <script src="./js/store.js"></script>
+  <script src="./js/install.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
