@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BrandLogo from '../components/BrandLogo.jsx';
 import Particles from '../components/Particles.jsx';
@@ -9,6 +9,11 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
+  const session = useAuthStore((s) => s.session);
+
+  useEffect(() => {
+    if (session) navigate('/feed', { replace: true });
+  }, [session, navigate]);
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +23,6 @@ export default function Login() {
 
   function validate() {
     if (!identifier.trim()) return 'Escribe tu correo o NickName.';
-    // Si parece email, validamos formato. Si es handle, dejamos pasar.
     const looksEmail = identifier.includes('@');
     if (looksEmail && !EMAIL_RE.test(identifier.trim())) return 'Correo inválido.';
     if (password.length < 6) return 'Contraseña mínima de 6 caracteres.';
@@ -32,12 +36,11 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      // Mock: aquí iría el POST /auth/login real.
-      await new Promise((r) => setTimeout(r, 450));
-      login(identifier.trim());
+      await new Promise((r) => setTimeout(r, 250));
+      login(identifier.trim(), password);
       navigate('/feed', { replace: true });
     } catch (err) {
-      setError('No pudimos iniciarte sesión. Intenta de nuevo.');
+      setError(err.message || 'No pudimos iniciarte sesión.');
     } finally {
       setSubmitting(false);
     }
@@ -131,7 +134,7 @@ export default function Login() {
 
           <button
             type="button"
-            onClick={() => alert('Registro de Nido (A4) — próximo entregable')}
+            onClick={() => navigate('/register')}
             className="w-full rounded-pill border-[1.5px] border-aura-purple bg-transparent py-4 font-semibold uppercase tracking-wider text-white transition hover:shadow-glow-purple active:scale-[.99]"
           >
             Registrarse
