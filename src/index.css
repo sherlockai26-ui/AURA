@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body {
+  background-color: #0B0C10;
+  color: #FFFFFF;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Best-effort anti-captura: bloquea selección, callout iOS y drag de imágenes.
+   El bloqueo real de capturas no es posible en navegadores; ver useCaptureGuard. */
+.no-capture {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.no-capture img,
+.no-capture video {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Watermark diagonal repetido sobre media sensible */
+.media-watermark::after {
+  content: attr(data-watermark);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.18);
+  font-size: 11px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 90px,
+    rgba(255, 255, 255, 0.04) 90px 91px
+  );
+  z-index: 2;
+}
+
+/* Scrollbar discreto */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+
+/* Ocultar scrollbar horizontal en filas tipo stories */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { scrollbar-width: none; }
