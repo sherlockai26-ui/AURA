@@ -1,37 +1,45 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Mock store: accounts + session + Chispas. En producción el "DB de accounts"
-// vive en el backend; aquí lo mantenemos en localStorage solo para demo.
-//
-// AccountRecord:
-//   {
-//     email: string,
-//     handle: string,
-//     password: string,
-//     mode: 'single' | 'duo',
-//     members: Array<{ name, phone, handle, verified }>,
-//     createdAt: number,
-//     bio?: string
-//   }
-//
-// Session:
-//   { email: string, activeMemberIndex: number, ts: number }
+/*
+ * AccountRecord
+ * {
+ *   email, handle, password, mode: 'single'|'duo',
+ *   members: [{ name, handle, phone, verified, isAdmin, photo }],
+ *   duoPhoto: null|string,
+ *   bio: string,
+ *   deletionVotes: string[],  // member handles que votaron eliminar
+ *   pendingPartner: boolean,  // un miembro salió, admin esperando nuevo integrante
+ *   pendingInvite: null|{ name, phone, otp, ts },
+ *   createdAt: number
+ * }
+ *
+ * Session
+ * { email, identity: 'member0'|'member1'|'duo', ts }
+ *
+ * Nota multi-dispositivo: localStorage es propio de cada dispositivo/navegador,
+ * por lo que dos dispositivos distintos tienen sus propios datos sin conflicto.
+ * Dos tabs del mismo navegador compartirían store (limitación del mock local).
+ * En producción: backend + JWT por dispositivo resuelve esto nativamente.
+ */
 
 export const useAuthStore = create(
   persist(
     (set, get) => ({
       accounts: {},
       session: null,
+      pendingWho: null,   // { email } — transient, no persisted
+      _otps: {},          // { key: code } — transient, no persisted
       sparks: 50,
       dailyFreeSpark: true,
 
-      // ---- queries --------------------------------------------------
+      /* ── Queries ─────────────────────────────────────────────────── */
+
       findByIdentifier(identifier) {
         const s = String(identifier || '').trim().toLowerCase();
         if (!s) return null;
         const accs = Object.values(get().accounts);
-        const byEmail = accs.find((a) => a.email === s);
+        const byEmail  = accs.find((a) => a.email === s);
         if (byEmail) return { account: byEmail, memberIndex: 0 };
         const byHandle = accs.find((a) => a.handle.toLowerCase() === s);
         if (byHandle) return { account: byHandle, memberIndex: 0 };
@@ -44,96 +52,251 @@ export const useAuthStore = create(
 
       currentAccount() {
         const s = get().session;
-        return s ? get().accounts[s.email] || null : null;
+        return s ? (get().accounts[s.email] || null) : null;
       },
 
       currentMember() {
-        const acc = get().currentAccount();
-        const s = get().session;
+        const acc  = get().currentAccount();
+        const s    = get().session;
         if (!acc || !s) return null;
-        return acc.members[s.activeMemberIndex] || null;
+        if (s.identity === 'member0') return acc.members[0] || null;
+        if (s.identity === 'member1') return acc.members[1] || null;
+        return null; // 'duo' identity — no individual member
       },
 
-      // ---- auth / lifecycle -----------------------------------------
-      register(payload) {
-        const email = payload.email.trim().toLowerCase();
-        if (get().accounts[email]) {
-          throw new Error('Ya existe una cuenta con este correo.');
-        }
-        const members = payload.members.map((m, i) => ({
-          name: m.name.trim(),
-          phone: m.phone.trim(),
-          handle: (m.handle || slugify(m.name) || `${payload.handle}-${i + 1}`).toLowerCase(),
-          verified: true,
-        }));
-        const account = {
-          email,
-          handle: payload.handle.trim(),
-          password: payload.password,
-          mode: payload.mode, // 'single' | 'duo'
-          members,
-          createdAt: Date.now(),
-          bio: '',
-        };
-        set((state) => ({
-          accounts: { ...state.accounts, [email]: account },
-          session: { email, activeMemberIndex: 0, ts: Date.now() },
-        }));
-        return account;
+      viewerHandle() {
+        const acc = get().currentAccount();
+        const s   = get().session;
+        if (!acc || !s) return '';
+        if (s.identity === 'duo')     return acc.handle;
+        if (s.identity === 'member0') return acc.members[0]?.handle || acc.handle;
+        if (s.identity === 'member1') return acc.members[1]?.handle || acc.handle;
+        return acc.handle;
       },
+
+      /* ── OTP helpers ─────────────────────────────────────────────── */
+
+      generateOtp(key) {
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        set((s) => ({ _otps: { ...s._otps, [key]: code } }));
+        return code;
+      },
+
+      verifyOtp(key, code) {
+        const stored = get()._otps[key];
+        if (!stored || stored !== String(code).trim()) return false;
+        set((s) => {
+          const next = { ...s._otps };
+          delete next[key];
+          return { _otps: next };
+        });
+        return true;
+      },
+
+      /* ── Auth ────────────────────────────────────────────────────── */
 
       login(identifier, password) {
         const hit = get().findByIdentifier(identifier);
         if (!hit) throw new Error('No encontramos esa cuenta o nickname.');
         if (hit.account.password !== password) throw new Error('Contraseña incorrecta.');
-        set({
-          session: {
-            email: hit.account.email,
-            activeMemberIndex: hit.memberIndex,
-            ts: Date.now(),
-          },
-        });
-        return hit.account;
+        if (hit.account.mode === 'duo') {
+          set({ pendingWho: { email: hit.account.email } });
+          return { needsWho: true };
+        }
+        set({ session: { email: hit.account.email, identity: 'member0', ts: Date.now() } });
+        return { needsWho: false };
+      },
+
+      finalizeIdentity(email, identity) {
+        set({ session: { email, identity, ts: Date.now() }, pendingWho: null });
+      },
+
+      clearPendingWho() {
+        set({ pendingWho: null });
       },
 
       logout() {
-        set({ session: null });
+        set({ session: null, pendingWho: null });
       },
 
-      deleteAccount() {
-        const s = get().session;
-        if (!s) return;
-        set((state) => {
-          const next = { ...state.accounts };
-          delete next[s.email];
+      /* ── Registration ────────────────────────────────────────────── */
+
+      register(payload) {
+        const email = payload.email.trim().toLowerCase();
+        if (get().accounts[email]) throw new Error('Ya existe una cuenta con este correo.');
+        const members = payload.members.map((m, i) => ({
+          name: m.name.trim(),
+          handle: (m.handle || slugify(m.name) || `${slugify(payload.handle)}-${i + 1}`).toLowerCase(),
+          phone: m.phone.trim(),
+          verified: true,
+          isAdmin: i === 0,
+          photo: null,
+        }));
+        const account = {
+          email,
+          handle: payload.handle.trim(),
+          password: payload.password,
+          mode: payload.mode,
+          members,
+          duoPhoto: null,
+          bio: '',
+          deletionVotes: [],
+          pendingPartner: false,
+          pendingInvite: null,
+          createdAt: Date.now(),
+        };
+        set((s) => ({
+          accounts: { ...s.accounts, [email]: account },
+          session: { email, identity: 'member0', ts: Date.now() },
+        }));
+        return account;
+      },
+
+      /* ── Duo management ─────────────────────────────────────────── */
+
+      // Miembro abandona el Duo. Requiere OTP previo (verificado fuera).
+      leaveDuo(email, memberIndex) {
+        set((s) => {
+          const acc = s.accounts[email];
+          if (!acc) return {};
+          const remaining = acc.members.filter((_, i) => i !== memberIndex).map((m) => ({
+            ...m,
+            isAdmin: true,
+          }));
+          return {
+            accounts: {
+              ...s.accounts,
+              [email]: { ...acc, members: remaining, pendingPartner: true, deletionVotes: [] },
+            },
+          };
+        });
+      },
+
+      // Admin invita a un nuevo integrante.
+      invitePartner(email, partnerData) {
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        set((s) => {
+          const acc = s.accounts[email];
+          if (!acc) return {};
+          return {
+            accounts: {
+              ...s.accounts,
+              [email]: { ...acc, pendingInvite: { ...partnerData, otp, ts: Date.now() } },
+            },
+          };
+        });
+        return otp; // devolver para mostrar en demo
+      },
+
+      // Nuevo integrante acepta la invitación (OTP verificado externamente).
+      acceptInvite(email, memberData) {
+        set((s) => {
+          const acc = s.accounts[email];
+          if (!acc || !acc.pendingInvite) return {};
+          const newMember = {
+            name: memberData.name || acc.pendingInvite.name,
+            handle: slugify(memberData.name || acc.pendingInvite.name),
+            phone: memberData.phone || acc.pendingInvite.phone,
+            verified: true,
+            isAdmin: false,
+            photo: null,
+          };
+          const updatedAccount = {
+            ...acc,
+            members: [...acc.members, newMember],
+            pendingPartner: false,
+            pendingInvite: null,
+          };
+          return {
+            accounts: { ...s.accounts, [email]: updatedAccount },
+            session: { email, identity: 'member1', ts: Date.now() },
+          };
+        });
+      },
+
+      // Votar eliminar cuenta. Si ambos miembros votaron → se elimina.
+      voteDeletion(email, memberHandle) {
+        const acc = get().accounts[email];
+        if (!acc) return false;
+        const already = acc.deletionVotes.includes(memberHandle);
+        if (already) return false;
+        const nextVotes = [...acc.deletionVotes, memberHandle];
+        const allVoted = nextVotes.length >= acc.members.length;
+        if (allVoted) {
+          set((s) => {
+            const next = { ...s.accounts };
+            delete next[email];
+            return { accounts: next, session: null };
+          });
+          return 'deleted';
+        }
+        set((s) => ({
+          accounts: {
+            ...s.accounts,
+            [email]: { ...acc, deletionVotes: nextVotes },
+          },
+        }));
+        return 'voted';
+      },
+
+      cancelDeletionVote(email, memberHandle) {
+        set((s) => {
+          const acc = s.accounts[email];
+          if (!acc) return {};
+          return {
+            accounts: {
+              ...s.accounts,
+              [email]: { ...acc, deletionVotes: acc.deletionVotes.filter((h) => h !== memberHandle) },
+            },
+          };
+        });
+      },
+
+      // Eliminar cuenta directamente (Single o admin único).
+      deleteAccount(email) {
+        set((s) => {
+          const next = { ...s.accounts };
+          delete next[email];
           return { accounts: next, session: null };
         });
       },
 
-      setActiveMember(index) {
-        set((state) => ({
-          session: state.session ? { ...state.session, activeMemberIndex: index } : null,
-        }));
+      /* ── Profile / Photos ────────────────────────────────────────── */
+
+      updatePhoto(email, target, dataUrl) {
+        set((s) => {
+          const acc = s.accounts[email];
+          if (!acc) return {};
+          if (target === 'duo') {
+            return { accounts: { ...s.accounts, [email]: { ...acc, duoPhoto: dataUrl } } };
+          }
+          const idx = target === 'member0' ? 0 : 1;
+          const members = acc.members.map((m, i) => (i === idx ? { ...m, photo: dataUrl } : m));
+          return { accounts: { ...s.accounts, [email]: { ...acc, members } } };
+        });
       },
 
-      // ---- Chispas --------------------------------------------------
+      updateBio(email, bio) {
+        set((s) => {
+          const acc = s.accounts[email];
+          if (!acc) return {};
+          return { accounts: { ...s.accounts, [email]: { ...acc, bio } } };
+        });
+      },
+
+      /* ── Chispas ─────────────────────────────────────────────────── */
+
       spendSpark(amount = 1) {
         const { sparks, dailyFreeSpark } = get();
-        if (dailyFreeSpark && amount === 1) {
-          set({ dailyFreeSpark: false });
-          return true;
-        }
+        if (dailyFreeSpark && amount === 1) { set({ dailyFreeSpark: false }); return true; }
         if (sparks < amount) return false;
         set({ sparks: sparks - amount });
         return true;
       },
-      addSparks(amount) {
-        set({ sparks: get().sparks + amount });
-      },
+      addSparks(amount) { set({ sparks: get().sparks + amount }); },
     }),
     {
-      name: 'aura-auth-v2',
-      version: 2,
+      name: 'aura-v3',
       partialize: (s) => ({
         accounts: s.accounts,
         session: s.session,
@@ -146,9 +309,6 @@ export const useAuthStore = create(
 
 function slugify(s) {
   return String(s || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '')
-    .slice(0, 20);
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20) || 'user';
 }
