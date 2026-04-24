@@ -11,7 +11,7 @@ export default function QuickAccessRow() {
   return (
     <section
       aria-label="Accesos rápidos"
-      className="mx-4 mt-3 grid grid-cols-3 gap-3 rounded-card bg-aura-surface p-3"
+      className="mx-4 mt-3 grid grid-cols-3 gap-3 rounded-card bg-aura-surface p-3 lg:hidden"
     >
       {items.map((it) => (
         <button
