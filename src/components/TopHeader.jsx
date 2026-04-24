@@ -25,17 +25,26 @@ export default function TopHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-2 bg-aura-bg/95 px-4 py-2 backdrop-blur-md border-b border-white/5">
-        <span className="text-[20px] font-bold tracking-[2px] text-white">AURA</span>
+      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-white/5 bg-aura-bg/95 px-4 py-2 backdrop-blur-md">
+        {/* Logo solo en móvil (en desktop lo muestra SideNav) */}
+        <span className="md:hidden text-[20px] font-bold tracking-[2px] text-white">AURA</span>
 
+        {/* Identidad activa — visible en todos los tamaños cuando es Duo */}
         {isDuo && (
           <div className="flex items-center gap-1.5 min-w-0">
             {identity === 'duo'     && <DuoAvatar account={account} size={28} />}
             {identity === 'member0' && <MemberAvatar member={member0} size={28} />}
             {identity === 'member1' && <MemberAvatar member={member1} size={28} />}
-            <span className="text-xs text-aura-text-2 truncate max-w-[100px]">{displayHandle}</span>
+            <span className="text-xs text-aura-text-2 truncate max-w-[100px] md:max-w-[160px]">
+              {displayHandle}
+            </span>
           </div>
         )}
+
+        {/* Título de sección — solo desktop (evita que se sienta vacío) */}
+        <h1 className="hidden md:block ml-2 text-sm font-semibold tracking-wider text-aura-text-2 uppercase">
+          Vitrina
+        </h1>
 
         <div className="flex items-center gap-3 ml-auto">
           <Link
