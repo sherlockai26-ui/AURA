@@ -12,6 +12,20 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <title>AURA · Tu espacio sagrado</title>
+    <script>
+      // Restaura la ruta original tras el redirect desde 404.html (SPA GH Pages).
+      (function () {
+        var l = window.location;
+        if (l.search && l.search.indexOf('?/') === 0) {
+          var decoded = l.search.slice(2).split('&').map(function (p) {
+            return p.replace(/~and~/g, '&');
+          });
+          var path = '/' + decoded.shift();
+          var qs = decoded.length ? '?' + decoded.join('&') : '';
+          window.history.replaceState(null, null, l.pathname.replace(/\/$/, '') + path + qs + l.hash);
+        }
+      })();
+    </script>
   </head>
   <body class="bg-aura-bg text-white antialiased">
     <div id="root"></div>

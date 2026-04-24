@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="0; url=./" />
+    <title>AURA</title>
+    <script>
+      // Single-Page Apps for GitHub Pages — técnica de rafgraph.
+      // Guarda la ruta actual en querystring y redirige a index.html;
+      // main.jsx lo restaura en el router antes de renderizar.
+      (function () {
+        var repo = 'AURA'; // nombre del repo/segmento base
+        var l = window.location;
+        var pathAfterRepo = l.pathname.replace(new RegExp('^/' + repo + '/?'), '');
+        var target = '/' + repo + '/?/' +
+          pathAfterRepo.replace(/&/g, '~and~') +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash;
+        l.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
