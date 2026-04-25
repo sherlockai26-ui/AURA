@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import BrandLogo from '../components/BrandLogo.jsx';
 import Particles from '../components/Particles.jsx';
 import { useAuthStore } from '../lib/store.js';
+import { auth, db } from '../lib/firebase.js';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const HANDLE_RE = /^[a-zA-Z0-9_.]{3,24}$/;
@@ -143,6 +146,12 @@ export default function Register() {
             ]
           : [{ name: p1.name, phone: p1.phone, handle: p1.apodo }],
       });
+      const email = account.email.trim().toLowerCase();
+      const fbResult = await createUserWithEmailAndPassword(auth, email, account.password).catch(() => null);
+      if (fbResult?.user) {
+        const { uid } = fbResult.user;
+        await setDoc(doc(db, 'users', uid), { uid, email, createdAt: serverTimestamp() }).catch(() => null);
+      }
       resetRegistrationData();
       navigate('/feed', { replace: true });
     } catch (err) {

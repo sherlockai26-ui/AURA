@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import BrandLogo from '../components/BrandLogo.jsx';
 import Particles from '../components/Particles.jsx';
 import { useAuthStore } from '../lib/store.js';
+import { auth } from '../lib/firebase.js';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
@@ -35,7 +37,9 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      await new Promise((r) => setTimeout(r, 250));
+      if (EMAIL_RE.test(identifier.trim())) {
+        await signInWithEmailAndPassword(auth, identifier.trim(), password).catch(() => null);
+      }
       const { needsWho } = login(identifier.trim(), password);
       if (!needsWho) navigate('/feed', { replace: true });
       // Si needsWho=true, el useEffect de pendingWho redirige a /who-is-here

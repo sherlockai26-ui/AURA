@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase.js';
 
 /*
  * AccountRecord
@@ -30,6 +32,8 @@ export const useAuthStore = create(
       session: null,
       pendingWho: null,   // { email } — transient, no persisted
       _otps: {},          // { key: code } — transient, no persisted
+      user: null,         // Firebase User object — transient, no persisted
+      onboardingCompletado: false,
       sparks: 50,
       dailyFreeSpark: true,
 
@@ -398,12 +402,16 @@ export const useAuthStore = create(
         return true;
       },
       addSparks(amount) { set({ sparks: get().sparks + amount }); },
+      completeOnboarding() { set({ onboardingCompletado: true }); },
+
+      setUser(firebaseUser) { set({ user: firebaseUser }); },
     }),
     {
       name: 'aura-v3',
       partialize: (s) => ({
         accounts: s.accounts,
         session: s.session,
+        onboardingCompletado: s.onboardingCompletado,
         sparks: s.sparks,
         dailyFreeSpark: s.dailyFreeSpark,
         activeMatch: s.activeMatch,
@@ -414,6 +422,10 @@ export const useAuthStore = create(
     }
   )
 );
+
+onAuthStateChanged(auth, (firebaseUser) => {
+  useAuthStore.getState().setUser(firebaseUser);
+});
 
 function slugify(s) {
   return String(s || '')
