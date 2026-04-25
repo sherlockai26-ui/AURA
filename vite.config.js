@@ -12,6 +12,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectRegister: 'auto',
       includeAssets: ['logo.svg', 'icons/*.png'],
       manifest: {
         name: 'AURA · Tu espacio sagrado',
@@ -35,14 +39,8 @@ export default defineConfig({
           { name: 'Mensajes', url: `${base}messages` },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
-        navigateFallback: `${base}index.html`,
-        // Activar el nuevo SW de inmediato para evitar que un SW viejo
-        // (de un deploy previo) siga sirviendo bundles obsoletos.
-        clientsClaim: true,
-        skipWaiting: true,
-        cleanupOutdatedCaches: true,
       },
     }),
   ],
