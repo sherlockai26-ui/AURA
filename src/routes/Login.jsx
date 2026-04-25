@@ -91,9 +91,14 @@ export default function Login() {
             </button>
           </div>
 
-          <a href="#forgot" className="mt-1 self-end text-aura-cyan hover:underline" style={{ fontSize: 12 }}>
+          <button
+            type="button"
+            onClick={() => navigate('/recuperar')}
+            className="mt-1 self-end text-aura-cyan hover:underline bg-transparent border-none p-0 cursor-pointer"
+            style={{ fontSize: 12 }}
+          >
             ¿Olvidaste tu contraseña?
-          </a>
+          </button>
 
           {error && (
             <p role="alert" className="mt-3 text-aura-error text-center" style={{ fontSize: 12 }}>{error}</p>
@@ -115,7 +120,7 @@ export default function Login() {
 
           <button
             type="button"
-            onClick={() => navigate('/register')}
+            onClick={() => navigate('/registro')}
             className="w-full rounded-pill border-[1.5px] border-aura-purple bg-transparent py-4 font-semibold uppercase tracking-wider text-white transition hover:shadow-glow-purple active:scale-[.99]"
           >
             Registrarse
@@ -125,8 +130,8 @@ export default function Login() {
         <footer className="mt-6 flex flex-col items-center gap-2 pb-2">
           <p className="text-center text-aura-text-2" style={{ fontSize: 10 }}>
             Al entrar, aceptas nuestros{' '}
-            <a href="#terms" className="text-aura-text-2 hover:underline">Términos</a> y{' '}
-            <a href="#privacy" className="text-aura-text-2 hover:underline">Política de Privacidad</a>.
+            <button type="button" onClick={() => navigate('/terminos')} className="text-aura-text-2 hover:underline bg-transparent border-none p-0 cursor-pointer" style={{ fontSize: 10 }}>Términos</button> y{' '}
+            <button type="button" onClick={() => navigate('/privacidad')} className="text-aura-text-2 hover:underline bg-transparent border-none p-0 cursor-pointer" style={{ fontSize: 10 }}>Política de Privacidad</button>.
           </p>
           <p className="flex items-center gap-1 text-aura-cyan" style={{ fontSize: 10 }}>
             <span aria-hidden>🔒</span> Conexión segura E2E

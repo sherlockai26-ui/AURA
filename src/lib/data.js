@@ -38,6 +38,70 @@ export function getMorePosts(offset, n = 4) {
   return Array.from({ length: n }, (_, i) => makePost(offset + i));
 }
 
+// Perfiles mock para Zona de Match (Single)
+export const mockSingles = [
+  {
+    id: 's1', apodo: '@LunaEterna', edad: 27, genero: 'mujer', online: true,
+    bio: 'Amante del jazz y el café a medianoche. Busco conexión real, sin prisa.',
+    tags: ['Jazz', 'Literatura', 'Café', 'Viajes'],
+    seed: 101,
+  },
+  {
+    id: 's2', apodo: '@VolcanCalmo', edad: 31, genero: 'hombre', online: false,
+    bio: 'Chef aficionado, ciclista de fines de semana y coleccionista de vinilos raros.',
+    tags: ['Cocina', 'Ciclismo', 'Música', 'Arte'],
+    seed: 102,
+  },
+  {
+    id: 's3', apodo: '@MarDeNoche', edad: 25, genero: 'mujer', online: true,
+    bio: 'Psicóloga de día, lectora compulsiva de noche. Me gustan las conversaciones de fondo.',
+    tags: ['Psicología', 'Lectura', 'Filosofía', 'Yoga'],
+    seed: 103,
+  },
+  {
+    id: 's4', apodo: '@CieloInfinito', edad: 29, genero: 'no-binario', online: true,
+    bio: 'Diseñador gráfico y viajero de bajo presupuesto. He dormido en 14 países.',
+    tags: ['Diseño', 'Viajes', 'Fotografía', 'Mochila'],
+    seed: 104,
+  },
+  {
+    id: 's5', apodo: '@BrasaRoja', edad: 33, genero: 'hombre', online: false,
+    bio: 'Padre de un perro enorme. Trabajo en tecnología pero vivo afuera del mundo digital.',
+    tags: ['Tech', 'Naturaleza', 'Perros', 'Senderismo'],
+    seed: 105,
+  },
+  {
+    id: 's6', apodo: '@EspejoRoto', edad: 24, genero: 'mujer', online: true,
+    bio: 'Actriz de teatro experimental. Busco alguien que no le tema a la profundidad.',
+    tags: ['Teatro', 'Poesía', 'Cine', 'Improvisación'],
+    seed: 106,
+  },
+  {
+    id: 's7', apodo: '@VientoSur', edad: 36, genero: 'hombre', online: false,
+    bio: 'Médico de urgencias. En mi tiempo libre: surf, tablas y silencio.',
+    tags: ['Medicina', 'Surf', 'Oceano', 'Meditación'],
+    seed: 107,
+  },
+  {
+    id: 's8', apodo: '@FlorDeRoca', edad: 28, genero: 'mujer', online: true,
+    bio: 'Bióloga marina con pasión por los hongos y la fermentación artesanal.',
+    tags: ['Ciencia', 'Naturaleza', 'Gastronomía', 'DIY'],
+    seed: 108,
+  },
+  {
+    id: 's9', apodo: '@EcoDelValle', edad: 30, genero: 'hombre', online: true,
+    bio: 'Músico independiente. Compongo por las noches y enseño guitarra por las mañanas.',
+    tags: ['Música', 'Guitarra', 'Composición', 'Enseñanza'],
+    seed: 109,
+  },
+  {
+    id: 's10', apodo: '@NieblaAzul', edad: 26, genero: 'mujer', online: false,
+    bio: 'Arquitecta de espacios y emociones. Creo que el hogar más importante es la persona.',
+    tags: ['Arquitectura', 'Diseño', 'Minimalismo', 'Arte'],
+    seed: 110,
+  },
+];
+
 // Stories: dos colecciones (Tu Círculo / Explorar)
 export const storiesCircle = handles.slice(0, 7).map((h, i) => ({
   id: 'sc' + i,

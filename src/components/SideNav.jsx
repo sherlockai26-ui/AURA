@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import BrandLogo from './BrandLogo.jsx';
-import { navItems } from './NavIcons.jsx';
+import { navItems, matchNavItem } from './NavIcons.jsx';
 import { useAuthStore } from '../lib/store.js';
 import { DuoAvatar, MemberAvatar } from '../routes/WhoIsHere.jsx';
 
@@ -12,6 +12,11 @@ export default function SideNav() {
   const logout   = useAuthStore((s) => s.logout);
 
   if (!session || !account) return null;
+
+  const isSingle = account.mode === 'single';
+  const items    = isSingle
+    ? navItems.map((item) => (item.to === '/destello' ? matchNavItem : item))
+    : navItems;
 
   const identity = session.identity;
   const activeMember = identity === 'member0' ? account.members[0]
@@ -40,7 +45,7 @@ export default function SideNav() {
       {/* Navegación */}
       <nav className="flex-1 px-3">
         <ul className="flex flex-col gap-1">
-          {navItems.map(({ to, label, Icon }) => (
+          {items.map(({ to, label, Icon }) => (
             <li key={to}>
               <NavLink
                 to={to}

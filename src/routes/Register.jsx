@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import BrandLogo from '../components/BrandLogo.jsx';
 import Particles from '../components/Particles.jsx';
 import { useAuthStore } from '../lib/store.js';
@@ -8,9 +8,14 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const HANDLE_RE = /^[a-zA-Z0-9_.]{3,24}$/;
 
 export default function Register() {
-  const navigate = useNavigate();
-  const register = useAuthStore((s) => s.register);
-  const session = useAuthStore((s) => s.session);
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const register              = useAuthStore((s) => s.register);
+  const session               = useAuthStore((s) => s.session);
+  const registrationData      = useAuthStore((s) => s.registrationData);
+  const setRegistrationData   = useAuthStore((s) => s.setRegistrationData);
+  const resetRegistrationData = useAuthStore((s) => s.resetRegistrationData);
+  const kycVerificado         = registrationData.kycVerificado;
 
   useEffect(() => {
     if (session) navigate('/feed', { replace: true });
@@ -19,12 +24,25 @@ export default function Register() {
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState(null); // 'single' | 'duo'
   const [account, setAccount] = useState({ email: '', handle: '', password: '', showPass: false });
-  const [p1, setP1] = useState({ name: '', phone: '' });
-  const [p2, setP2] = useState({ name: '', phone: '' });
+  const [p1, setP1] = useState({ name: '', phone: '', apodo: '', edad: '', genero: '' });
+  const [p2, setP2] = useState({ name: '', phone: '', apodo: '', edad: '', genero: '' });
+  const [termsChecked, setTermsChecked] = useState(false);
   const [otpValues, setOtpValues] = useState({ 1: ['', '', '', '', '', ''], 2: ['', '', '', '', '', ''] });
   const [generatedOtps, setGeneratedOtps] = useState({ 1: '', 2: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Restaurar estado del formulario al volver desde VerifyKYC
+  useEffect(() => {
+    if (location.state?.fromKYC) {
+      const rd = registrationData;
+      if (rd.modalidad) setMode(rd.modalidad === 'singular' ? 'single' : rd.modalidad);
+      if (rd._account)  setAccount(rd._account);
+      if (rd._p1)       setP1(rd._p1);
+      if (rd._p2)       setP2(rd._p2);
+      if (rd._step)     setStep(rd._step);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalSteps = 4;
   const isDuo = mode === 'duo';
@@ -49,7 +67,33 @@ export default function Register() {
       if (digitsOf(p2.phone) < 8) return 'Teléfono de tu pareja inválido.';
       if (p1.phone.trim() === p2.phone.trim()) return 'Los teléfonos no pueden ser iguales.';
     }
+    if (!termsChecked) return isDuo
+      ? 'Confirma que ambos son mayores de 18 años.'
+      : 'Confirma que eres mayor de 18 años.';
+    if (!kycVerificado) return 'Debes verificar tu edad con INE o Pasaporte antes de continuar.';
     return '';
+  }
+
+  function goToKYC() {
+    // Persistir estado antes de navegar para restaurarlo al volver
+    setRegistrationData({
+      modalidad:  mode === 'single' ? 'singular' : mode,
+      nombreNido: account.handle,
+      email:      account.email,
+      password:   account.password,
+      miembros:   isDuo
+        ? [
+            { apodo: p1.apodo, edad: p1.edad, genero: p1.genero, name: p1.name, phone: p1.phone },
+            { apodo: p2.apodo, edad: p2.edad, genero: p2.genero, name: p2.name, phone: p2.phone },
+          ]
+        : [{ apodo: p1.apodo, edad: p1.edad, genero: p1.genero, name: p1.name, phone: p1.phone }],
+      terminosAceptados: termsChecked,
+      _step:    step,
+      _account: account,
+      _p1:      p1,
+      _p2:      p2,
+    });
+    navigate('/verificacion');
   }
   function validateStep4() {
     const code1 = otpValues[1].join('');
@@ -92,8 +136,14 @@ export default function Register() {
         email: account.email,
         handle: account.handle,
         password: account.password,
-        members: isDuo ? [p1, p2] : [p1],
+        members: isDuo
+          ? [
+              { name: p1.name, phone: p1.phone, handle: p1.apodo },
+              { name: p2.name, phone: p2.phone, handle: p2.apodo },
+            ]
+          : [{ name: p1.name, phone: p1.phone, handle: p1.apodo }],
       });
+      resetRegistrationData();
       navigate('/feed', { replace: true });
     } catch (err) {
       setError(err.message || 'No pudimos crear tu cuenta.');
@@ -122,7 +172,15 @@ export default function Register() {
           {step === 1 && <StepMode mode={mode} setMode={setMode} />}
           {step === 2 && <StepAccount value={account} onChange={setAccount} />}
           {step === 3 && (
-            <StepPeople isDuo={isDuo} p1={p1} setP1={setP1} p2={p2} setP2={setP2} />
+            <StepPeople
+              isDuo={isDuo}
+              p1={p1} setP1={setP1}
+              p2={p2} setP2={setP2}
+              termsChecked={termsChecked}
+              onTermsChange={setTermsChecked}
+              kycVerificado={kycVerificado}
+              onVerifyKYC={goToKYC}
+            />
           )}
           {step === 4 && (
             <StepVerify
@@ -264,11 +322,57 @@ function StepAccount({ value, onChange }) {
   );
 }
 
-function StepPeople({ isDuo, p1, setP1, p2, setP2 }) {
+function StepPeople({ isDuo, p1, setP1, p2, setP2, termsChecked, onTermsChange, kycVerificado, onVerifyKYC }) {
   return (
     <section className="mt-2 flex flex-col gap-5">
       <PersonBlock title={isDuo ? 'Persona 1' : 'Tus datos'} value={p1} onChange={setP1} />
       {isDuo && <PersonBlock title="Persona 2" value={p2} onChange={setP2} />}
+
+      <p className="text-center text-aura-text-2" style={{ fontSize: 12 }}>
+        <span className="text-aura-cyan" aria-hidden>🔒</span>{' '}
+        Las fotos con rostro solo serán visibles para Matches confirmados.
+      </p>
+
+      {/* Checkbox de edad */}
+      <label className="flex cursor-pointer items-start gap-3 rounded-card border border-white/10 bg-aura-surface p-3">
+        <input
+          type="checkbox"
+          checked={termsChecked}
+          onChange={(e) => onTermsChange(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-aura-cyan"
+        />
+        <span className="text-xs text-aura-text-2">
+          {isDuo
+            ? 'Ambos somos mayores de 18 años y aceptamos los términos de AURA.'
+            : 'Soy mayor de 18 años y acepto los términos de AURA.'}
+        </span>
+      </label>
+
+      {/* Verificación KYC */}
+      <div className="rounded-card border border-aura-purple/40 bg-aura-surface p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-aura-cyan" style={{ fontSize: 16 }}>🛡️</span>
+          <p className="text-sm font-semibold text-white">Verificación de edad</p>
+        </div>
+        <p className="mb-3 text-xs text-aura-text-2">
+          Requerida para continuar. Escanea tu INE o Pasaporte.
+        </p>
+        {kycVerificado ? (
+          <div className="flex items-center gap-2 text-sm text-aura-cyan">
+            <span>✓</span>
+            <span className="font-medium">Edad verificada correctamente</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onVerifyKYC}
+            className="w-full rounded-pill border border-aura-purple bg-transparent py-3 text-sm font-semibold uppercase tracking-wider text-white transition hover:shadow-glow-purple active:scale-[.99]"
+          >
+            Verificar Edad con INE/Pasaporte
+          </button>
+        )}
+      </div>
+
       <p className="text-center text-aura-text-2" style={{ fontSize: 12 }}>
         Verificaremos {isDuo ? 'ambos teléfonos' : 'tu teléfono'} por SMS en el siguiente paso.
       </p>
@@ -286,6 +390,37 @@ function PersonBlock({ title, value, onChange }) {
           value={value.name}
           onChange={(v) => onChange({ ...value, name: v })}
         />
+        <Input
+          label="Apodo (opcional)"
+          value={value.apodo}
+          onChange={(v) => onChange({ ...value, apodo: v })}
+        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Edad (18–99)"
+            value={value.edad}
+            maxLength={2}
+            onChange={(e) => {
+              const n = e.target.value.replace(/\D/g, '').slice(0, 2);
+              onChange({ ...value, edad: n });
+            }}
+            className="w-28 rounded-card bg-aura-bg px-4 py-4 text-white placeholder-aura-text-2 outline-none border border-transparent transition focus:border-aura-purple focus:shadow-glow-purple"
+          />
+          <select
+            value={value.genero}
+            onChange={(e) => onChange({ ...value, genero: e.target.value })}
+            className="min-w-0 flex-1 rounded-card bg-aura-bg px-4 py-4 text-white outline-none border border-transparent transition focus:border-aura-purple appearance-none"
+            style={{ color: value.genero ? '#fff' : '#B0B0B0' }}
+          >
+            <option value="" style={{ color: '#B0B0B0' }}>Género/Identidad (opc.)</option>
+            <option value="hombre">Hombre</option>
+            <option value="mujer">Mujer</option>
+            <option value="no-binario">No binario</option>
+            <option value="prefiero-no-decir">Prefiero no decir</option>
+          </select>
+        </div>
         <Input
           label="Teléfono móvil"
           value={value.phone}

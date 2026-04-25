@@ -33,6 +33,34 @@ export const useAuthStore = create(
       sparks: 50,
       dailyFreeSpark: true,
 
+      /* ── Match ───────────────────────────────────────────────────── */
+      activeMatch: null,          // { matchId, otherUserId, otherNickname, chatExpiresAt, videoCallMinutesLeft, daysLeft, giftVideoUsed }
+      dailyLikesRemaining: 5,
+
+      /* ── Cita Doble ──────────────────────────────────────────────── */
+      citaDoble: {
+        isSearching:      false,
+        sessionId:        null,
+        participants:     [],     // [{ id, type, label, handle, color, emoji }]
+        timeRemaining:    600,    // 10 min en segundos
+        freeEntriesToday: 1,
+      },
+
+      registrationData: {
+        modalidad: null,        // 'singular' | 'duo'
+        nombreNido: '',
+        email: '',
+        password: '',
+        miembros: [],           // [{ apodo, edad, genero, name, phone }]
+        terminosAceptados: false,
+        kycVerificado: false,
+        // Estado interno para restaurar el formulario al volver del KYC
+        _step: 1,
+        _account: null,
+        _p1: null,
+        _p2: null,
+      },
+
       /* ── Queries ─────────────────────────────────────────────────── */
 
       findByIdentifier(identifier) {
@@ -95,7 +123,83 @@ export const useAuthStore = create(
 
       /* ── Auth ────────────────────────────────────────────────────── */
 
+      /* ── Cita Doble methods ──────────────────────────────────────── */
+      startSearch() {
+        set((s) => ({ citaDoble: { ...s.citaDoble, isSearching: true } }));
+      },
+      cancelSearch() {
+        set((s) => ({ citaDoble: { ...s.citaDoble, isSearching: false } }));
+      },
+      joinSession(sessionId, participants) {
+        set((s) => ({
+          citaDoble: { ...s.citaDoble, isSearching: false, sessionId, participants, timeRemaining: 600 },
+        }));
+      },
+      leaveSession() {
+        set((s) => ({
+          citaDoble: { ...s.citaDoble, sessionId: null, participants: [], timeRemaining: 600 },
+        }));
+      },
+      extendTime(seconds, cost) {
+        if (!get().spendSpark(cost)) return false;
+        set((s) => ({
+          citaDoble: { ...s.citaDoble, timeRemaining: s.citaDoble.timeRemaining + seconds },
+        }));
+        return true;
+      },
+      decrementFreeEntry() {
+        set((s) => ({
+          citaDoble: {
+            ...s.citaDoble,
+            freeEntriesToday: Math.max(0, s.citaDoble.freeEntriesToday - 1),
+          },
+        }));
+      },
+
+      setActiveMatch(match) {
+        set({ activeMatch: match });
+      },
+      clearActiveMatch() {
+        set({ activeMatch: null });
+      },
+      decrementLikes() {
+        set((s) => ({ dailyLikesRemaining: Math.max(0, s.dailyLikesRemaining - 1) }));
+      },
+      resetDailyLikes() {
+        set({ dailyLikesRemaining: 5 });
+      },
+
+      setRegistrationData(data) {
+        set((s) => ({ registrationData: { ...s.registrationData, ...data } }));
+      },
+
+      resetRegistrationData() {
+        set({
+          registrationData: {
+            modalidad: null,
+            nombreNido: '',
+            email: '',
+            password: '',
+            miembros: [],
+            terminosAceptados: false,
+            kycVerificado: false,
+            _step: 1,
+            _account: null,
+            _p1: null,
+            _p2: null,
+          },
+        });
+      },
+
       login(identifier, password) {
+        // Cuenta de demostración
+        if (
+          identifier.trim().toLowerCase() === 'test@aura.com' &&
+          password === 'Test123!'
+        ) {
+          set({ session: { email: 'test@aura.com', identity: 'member0', ts: Date.now() } });
+          return { needsWho: false };
+        }
         const hit = get().findByIdentifier(identifier);
         if (!hit) throw new Error('No encontramos esa cuenta o nickname.');
         if (hit.account.password !== password) throw new Error('Contraseña incorrecta.');
@@ -302,6 +406,10 @@ export const useAuthStore = create(
         session: s.session,
         sparks: s.sparks,
         dailyFreeSpark: s.dailyFreeSpark,
+        activeMatch: s.activeMatch,
+        dailyLikesRemaining: s.dailyLikesRemaining,
+        citaDoble: s.citaDoble,
+        registrationData: s.registrationData,
       }),
     }
   )
