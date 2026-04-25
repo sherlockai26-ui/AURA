@@ -1,0 +1,28 @@
+# docker-compose para AURA. Ajusta PORT y BASE_PATH según tu setup.
+#
+#   docker compose build
+#   docker compose up -d
+#
+# Variables soportadas (en .env o exportadas):
+#   PORT       → puerto del host donde nginx del proxy reverso apunta. Default 8080.
+#   BASE_PATH  → ruta donde se sirve. Default "/" (dominio raíz).
+
+services:
+  aura:
+    build:
+      context: .
+      args:
+        BASE_PATH: ${BASE_PATH:-/}
+    image: aura:latest
+    container_name: aura
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
+    # Si tu reverse proxy (nginx/traefik) corre en otra red Docker,
+    # descomenta esto y conéctalo a esa red:
+    # networks:
+    #   - web
+
+# networks:
+#   web:
+#     external: true

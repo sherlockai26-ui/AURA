@@ -38,6 +38,11 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
         navigateFallback: `${base}index.html`,
+        // Activar el nuevo SW de inmediato para evitar que un SW viejo
+        // (de un deploy previo) siga sirviendo bundles obsoletos.
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
       },
     }),
   ],
