@@ -37,12 +37,16 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      if (EMAIL_RE.test(identifier.trim())) {
-        await signInWithEmailAndPassword(auth, identifier.trim(), password).catch(() => null);
+      if (EMAIL_RE.test(identifier.trim()) && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+        try {
+          await signInWithEmailAndPassword(auth, identifier.trim(), password);
+        } catch (fbErr) {
+          const msg = translateFbError(fbErr.code);
+          if (msg) throw new Error(msg);
+        }
       }
       const { needsWho } = login(identifier.trim(), password);
       if (!needsWho) navigate('/feed', { replace: true });
-      // Si needsWho=true, el useEffect de pendingWho redirige a /who-is-here
     } catch (err) {
       setError(err.message || 'No pudimos iniciarte sesión.');
     } finally {
@@ -144,4 +148,17 @@ export default function Login() {
       </main>
     </div>
   );
+}
+
+function translateFbError(code) {
+  const map = {
+    'auth/user-not-found':         'Usuario no encontrado.',
+    'auth/wrong-password':         'Contraseña incorrecta.',
+    'auth/invalid-credential':     'Credenciales incorrectas.',
+    'auth/invalid-email':          'Correo inválido.',
+    'auth/too-many-requests':      'Demasiados intentos. Intenta más tarde.',
+    'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+    'auth/user-disabled':          'Esta cuenta ha sido desactivada.',
+  };
+  return map[code] || null;
 }

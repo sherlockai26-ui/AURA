@@ -1,22 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
 import { useAuthStore } from '../lib/store.js';
 
 export default function MiNido() {
-  const navigate = useNavigate();
-  const user     = useAuthStore((s) => s.user);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const navigate       = useNavigate();
+  const user           = useAuthStore((s) => s.user);
+  const profileData    = useAuthStore((s) => s.profileData);
+  const setProfileData = useAuthStore((s) => s.setProfileData);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    getDoc(doc(db, 'profiles', user.uid))
-      .then((snap) => setProfile(snap.exists() ? snap.data() : null))
-      .catch(() => null)
-      .finally(() => setLoading(false));
-  }, [user]);
+    if (!user) { setReady(true); return; }
+    const unsub = onSnapshot(
+      doc(db, 'profiles', user.uid),
+      (snap) => { setProfileData(snap.exists() ? snap.data() : null); setReady(true); },
+      () => setReady(true)
+    );
+    return unsub;
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="mx-auto max-w-[480px] px-4 py-6 text-white">
@@ -31,13 +34,13 @@ export default function MiNido() {
         </button>
       </div>
 
-      {loading && <p className="text-center text-aura-text-2 text-sm">Cargando…</p>}
+      {!ready && <p className="text-center text-aura-text-2 text-sm">Cargando…</p>}
 
-      {!loading && !user && (
+      {ready && !user && (
         <p className="text-center text-aura-text-2 text-sm">Inicia sesión para ver tu Nido.</p>
       )}
 
-      {!loading && user && !profile && (
+      {ready && user && !profileData && (
         <div className="rounded-card border border-white/10 bg-aura-surface p-6 text-center">
           <p className="text-aura-text-2 text-sm mb-4">Tu Nido aún no tiene perfil.</p>
           <button
@@ -50,21 +53,28 @@ export default function MiNido() {
         </div>
       )}
 
-      {!loading && profile && (
+      {ready && profileData && (
         <div className="rounded-card border border-white/10 bg-aura-surface p-5 flex flex-col gap-3">
+          {profileData.photoURL && (
+            <img
+              src={profileData.photoURL}
+              alt="Foto del Nido"
+              className="w-20 h-20 rounded-full object-cover self-center"
+            />
+          )}
           <div>
             <p className="text-xs text-aura-text-2 mb-1">Nombre</p>
-            <p className="font-medium">{profile.displayName || '—'}</p>
+            <p className="font-medium">{profileData.displayName || '—'}</p>
           </div>
           <div>
             <p className="text-xs text-aura-text-2 mb-1">Bio</p>
-            <p className="text-sm text-white/80 whitespace-pre-line">{profile.bio || '—'}</p>
+            <p className="text-sm text-white/80 whitespace-pre-line">{profileData.bio || '—'}</p>
           </div>
-          {profile.tags?.length > 0 && (
+          {profileData.tags?.length > 0 && (
             <div>
               <p className="text-xs text-aura-text-2 mb-2">Etiquetas</p>
               <div className="flex flex-wrap gap-2">
-                {profile.tags.map((tag) => (
+                {profileData.tags.map((tag) => (
                   <span
                     key={tag}
                     className="rounded-full border border-aura-purple/60 px-3 py-0.5 text-xs text-aura-purple"

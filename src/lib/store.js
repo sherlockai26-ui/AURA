@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase.js';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from './firebase.js';
 
 /*
  * AccountRecord
@@ -33,6 +34,7 @@ export const useAuthStore = create(
       pendingWho: null,   // { email } — transient, no persisted
       _otps: {},          // { key: code } — transient, no persisted
       user: null,         // Firebase User object — transient, no persisted
+      profileData: null,  // Firestore profiles doc — transient, no persisted
       onboardingCompletado: false,
       sparks: 50,
       dailyFreeSpark: true,
@@ -395,16 +397,26 @@ export const useAuthStore = create(
       /* ── Chispas ─────────────────────────────────────────────────── */
 
       spendSpark(amount = 1) {
-        const { sparks, dailyFreeSpark } = get();
-        if (dailyFreeSpark && amount === 1) { set({ dailyFreeSpark: false }); return true; }
+        const { sparks, dailyFreeSpark, user } = get();
+        if (dailyFreeSpark && amount === 1) {
+          set({ dailyFreeSpark: false });
+          if (user?.uid) syncSparks(user.uid, get().sparks);
+          return true;
+        }
         if (sparks < amount) return false;
         set({ sparks: sparks - amount });
+        if (user?.uid) syncSparks(user.uid, get().sparks);
         return true;
       },
-      addSparks(amount) { set({ sparks: get().sparks + amount }); },
+      addSparks(amount) {
+        set({ sparks: get().sparks + amount });
+        const uid = get().user?.uid;
+        if (uid) syncSparks(uid, get().sparks);
+      },
       completeOnboarding() { set({ onboardingCompletado: true }); },
 
       setUser(firebaseUser) { set({ user: firebaseUser }); },
+      setProfileData(data) { set({ profileData: data }); },
     }),
     {
       name: 'aura-v3',
@@ -423,8 +435,30 @@ export const useAuthStore = create(
   )
 );
 
-onAuthStateChanged(auth, (firebaseUser) => {
+async function syncSparks(uid, sparks) {
+  try { await setDoc(doc(db, 'users', uid), { sparks }, { merge: true }); } catch {}
+}
+
+let _profileUnsub = null;
+
+onAuthStateChanged(auth, async (firebaseUser) => {
   useAuthStore.getState().setUser(firebaseUser);
+  if (_profileUnsub) { _profileUnsub(); _profileUnsub = null; }
+  if (firebaseUser) {
+    try {
+      const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+      if (snap.exists() && snap.data().sparks !== undefined) {
+        useAuthStore.setState({ sparks: snap.data().sparks });
+      }
+    } catch {}
+    _profileUnsub = onSnapshot(
+      doc(db, 'profiles', firebaseUser.uid),
+      (snap) => useAuthStore.getState().setProfileData(snap.exists() ? snap.data() : null),
+      () => {}
+    );
+  } else {
+    useAuthStore.getState().setProfileData(null);
+  }
 });
 
 function slugify(s) {

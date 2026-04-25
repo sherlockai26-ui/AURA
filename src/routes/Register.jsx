@@ -147,10 +147,17 @@ export default function Register() {
           : [{ name: p1.name, phone: p1.phone, handle: p1.apodo }],
       });
       const email = account.email.trim().toLowerCase();
-      const fbResult = await createUserWithEmailAndPassword(auth, email, account.password).catch(() => null);
-      if (fbResult?.user) {
-        const { uid } = fbResult.user;
-        await setDoc(doc(db, 'users', uid), { uid, email, createdAt: serverTimestamp() }).catch(() => null);
+      if (import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+        try {
+          const fbResult = await createUserWithEmailAndPassword(auth, email, account.password);
+          if (fbResult?.user) {
+            const { uid } = fbResult.user;
+            await setDoc(doc(db, 'users', uid), { uid, email, createdAt: serverTimestamp() });
+          }
+        } catch (fbErr) {
+          const msg = translateFbRegisterError(fbErr.code);
+          if (msg) throw new Error(msg);
+        }
       }
       resetRegistrationData();
       navigate('/feed', { replace: true });
@@ -580,4 +587,15 @@ function maskPhone(p) {
 }
 function randomOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function translateFbRegisterError(code) {
+  const map = {
+    'auth/email-already-in-use':   'Este correo ya tiene una cuenta registrada.',
+    'auth/invalid-email':          'El correo electrónico no es válido.',
+    'auth/weak-password':          'La contraseña es demasiado débil (mínimo 6 caracteres).',
+    'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
+    'auth/too-many-requests':      'Demasiados intentos. Intenta más tarde.',
+  };
+  return map[code] || null;
 }

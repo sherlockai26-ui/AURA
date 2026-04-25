@@ -19,6 +19,8 @@ import CitaDobleResultado from './routes/CitaDobleResultado.jsx';
 import Onboarding from './routes/Onboarding.jsx';
 import MiNido from './routes/MiNido.jsx';
 import EditarNido from './routes/EditarNido.jsx';
+import EspejoChat from './routes/EspejoChat.jsx';
+import Monedero from './routes/Monedero.jsx';
 import { useAuthStore } from './lib/store.js';
 
 function RequireAuth({ children }) {
@@ -57,7 +59,7 @@ export default function App() {
         <Route path="/feed"          element={<Feed />} />
         <Route path="/destello"      element={<Placeholder title="Destello" subtitle="Videochat en pareja a 4 bandas (próximamente)" icon="⚡" />} />
         <Route path="/notifications" element={<Placeholder title="Notificaciones" subtitle="Movimientos de tu Nido aparecerán aquí" icon="🔔" />} />
-        <Route path="/messages"      element={<Placeholder title="Espejo" subtitle="Conversaciones cifradas E2E" icon="💬" />} />
+        <Route path="/messages"      element={<EspejoChat />} />
         <Route path="/profile"       element={<Profile />} />
         {/* Zona de Match */}
         <Route path="/zona-match"                      element={<ZonaMatch />} />
@@ -73,6 +75,8 @@ export default function App() {
         {/* Nido */}
         <Route path="/nido"         element={<MiNido />} />
         <Route path="/nido/editar"  element={<EditarNido />} />
+        {/* Monedero */}
+        <Route path="/monedero"     element={<Monedero />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

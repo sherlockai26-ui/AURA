@@ -1,32 +1,62 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase.js';
+import { uploadImage } from '../lib/uploadImage.js';
 import { useAuthStore } from '../lib/store.js';
 
 export default function EditarNido() {
-  const navigate = useNavigate();
-  const user     = useAuthStore((s) => s.user);
+  const navigate       = useNavigate();
+  const user           = useAuthStore((s) => s.user);
+  const profileData    = useAuthStore((s) => s.profileData);
+  const setProfileData = useAuthStore((s) => s.setProfileData);
 
   const [displayName, setDisplayName] = useState('');
   const [bio,         setBio]         = useState('');
   const [tagsRaw,     setTagsRaw]     = useState('');
+  const [photoURL,    setPhotoURL]    = useState('');
   const [saving,      setSaving]      = useState(false);
+  const [uploading,   setUploading]   = useState(false);
   const [error,       setError]       = useState('');
   const [success,     setSuccess]     = useState(false);
+  const fileRef = useRef(null);
 
+  // Suscripción realtime al perfil
   useEffect(() => {
     if (!user) return;
-    getDoc(doc(db, 'profiles', user.uid))
-      .then((snap) => {
-        if (!snap.exists()) return;
-        const d = snap.data();
-        setDisplayName(d.displayName || '');
-        setBio(d.bio || '');
-        setTagsRaw((d.tags || []).join(', '));
-      })
-      .catch(() => null);
-  }, [user]);
+    const unsub = onSnapshot(
+      doc(db, 'profiles', user.uid),
+      (snap) => setProfileData(snap.exists() ? snap.data() : null),
+      () => {}
+    );
+    return unsub;
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-rellenar form cuando el perfil cambia
+  useEffect(() => {
+    if (!profileData) return;
+    setDisplayName(profileData.displayName || '');
+    setBio(profileData.bio || '');
+    setTagsRaw((profileData.tags || []).join(', '));
+    setPhotoURL(profileData.photoURL || '');
+  }, [profileData]);
+
+  async function onPhotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploading(true);
+    setError('');
+    try {
+      const url = await uploadImage(file, `profiles/${user.uid}/avatar`);
+      setPhotoURL(url);
+      await setDoc(doc(db, 'profiles', user.uid), { photoURL: url, updatedAt: serverTimestamp() }, { merge: true });
+    } catch (err) {
+      setError('No se pudo subir la imagen.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
 
   async function onSave(e) {
     e.preventDefault();
@@ -61,6 +91,23 @@ export default function EditarNido() {
           ←
         </button>
         <h1 className="text-xl font-semibold">Editar Nido</h1>
+      </div>
+
+      {/* Foto de perfil */}
+      <div className="flex flex-col items-center gap-3 mb-5">
+        {photoURL
+          ? <img src={photoURL} alt="Foto" className="w-24 h-24 rounded-full object-cover" />
+          : <div className="w-24 h-24 rounded-full bg-aura-surface flex items-center justify-center text-3xl">🏠</div>
+        }
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="text-xs text-aura-cyan hover:underline disabled:opacity-50"
+        >
+          {uploading ? 'Subiendo…' : 'Cambiar foto'}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
       </div>
 
       <form onSubmit={onSave} className="flex flex-col gap-4">
@@ -108,7 +155,7 @@ export default function EditarNido() {
 
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || uploading}
           className="w-full rounded-pill bg-aura-cyan py-4 font-semibold uppercase tracking-wider text-aura-bg shadow-glow-cyan transition active:scale-[.99] disabled:opacity-60 hover:opacity-90"
         >
           {saving ? 'Guardando…' : 'Guardar cambios'}
