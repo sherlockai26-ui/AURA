@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
 import { MemberAvatar, DuoAvatar } from './WhoIsHere.jsx';
 
@@ -277,10 +277,10 @@ export default function Profile() {
       <section className="mx-4 mt-3 rounded-card bg-aura-surface p-4">
         <h3 className="mb-2 text-sm font-semibold tracking-wider">Ajustes</h3>
         <div className="flex flex-col divide-y divide-white/5 mb-4">
-          <Row label="Seguridad"           hint="Contraseña, 2FA, sesiones"  />
-          <Row label="Monedero · Chispas"  hint={`${sparks} ⚡ disponibles`} />
-          <Row label="Notificaciones"      hint="Próximamente"               />
-          <Row label="Legal"               hint="Términos y Privacidad"      />
+          <Row to="/seguridad"      label="Seguridad"           hint="Contraseña, 2FA, sesiones"  />
+          <Row to="/monedero"       label="Monedero · Chispas"  hint={`${sparks} ⚡ disponibles`} />
+          <Row to="/notificaciones" label="Notificaciones"      hint="Centro de avisos"           />
+          <Row to="/legal"          label="Legal"               hint="Términos y Privacidad"      />
         </div>
         <div className="flex flex-col gap-3">
           <button
@@ -487,15 +487,30 @@ function Stat({ label, value }) {
   );
 }
 
-function Row({ label, hint }) {
-  return (
-    <div className="flex items-center justify-between py-3 opacity-60">
+function Row({ label, hint, to }) {
+  const content = (
+    <>
       <div>
         <p className="text-sm text-white">{label}</p>
         <p className="text-[11px] text-aura-text-2">{hint}</p>
       </div>
       <span className="text-aura-text-2">›</span>
-    </div>
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="flex items-center justify-between py-3 transition hover:text-aura-cyan"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between py-3 opacity-60">{content}</div>
   );
 }
 

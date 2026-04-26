@@ -19,7 +19,7 @@ export default function RightPanel() {
         <div className="mt-1 flex items-center justify-between">
           <span className="text-2xl font-bold text-aura-cyan">⚡ {sparks}</span>
           <Link
-            to="/wallet"
+            to="/monedero"
             className="rounded-pill border border-aura-cyan/50 px-3 py-1 text-xs text-aura-cyan hover:shadow-glow-cyan transition"
           >
             Recargar
@@ -45,7 +45,7 @@ export default function RightPanel() {
         <p className="text-[11px] text-aura-text-2">
           {isDuo ? `${account.members.length} integrantes · Duo` : 'Single'}
         </p>
-        <Link to="/profile" className="mt-3 inline-block text-xs text-aura-cyan hover:underline">
+        <Link to="/nido" className="mt-3 inline-block text-xs text-aura-cyan hover:underline">
           Ver perfil completo →
         </Link>
       </section>

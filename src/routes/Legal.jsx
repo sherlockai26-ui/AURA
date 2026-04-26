@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const TODAY = '25/04/2026';
+const TODAY = '26/04/2026';
 
 const TERMINOS = [
   { heading: true,  text: `Última actualización: ${TODAY}` },
@@ -18,7 +18,7 @@ const TERMINOS = [
   { heading: true,  text: '6. Limitación de responsabilidad' },
   { heading: false, text: 'Aura no se hace responsable de las interacciones entre usuarios fuera de la plataforma ni del contenido generado por los mismos.' },
   { heading: true,  text: '7. Contacto' },
-  { heading: false, text: 'Para consultas legales: soporte@auraconecta.com' },
+  { heading: false, text: 'Para consultas legales: soporte@auraco-necci.com' },
 ];
 
 const PRIVACIDAD = [

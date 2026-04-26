@@ -191,10 +191,10 @@ export default function MenuDrawer({ open, onClose }) {
               <section>
                 <h4 className="mb-2 text-xs uppercase tracking-[2px] text-aura-text-2">Navegar</h4>
                 <nav className="flex flex-col">
-                  <MenuRow to="/profile"        onClose={onClose} icon="△">Mi Nido</MenuRow>
+                  <MenuRow to="/nido"           onClose={onClose} icon="△">Mi Nido</MenuRow>
                   <MenuRow to="/feed"           onClose={onClose} icon="❖">Vitrina</MenuRow>
                   <MenuRow to="/messages"       onClose={onClose} icon="💬">Mensajes</MenuRow>
-                  <MenuRow to="/notifications"  onClose={onClose} icon="🔔">Notificaciones</MenuRow>
+                  <MenuRow to="/notificaciones" onClose={onClose} icon="🔔">Notificaciones</MenuRow>
                   <MenuRow to="/destello"       onClose={onClose} icon="⚡">Destello</MenuRow>
                 </nav>
               </section>

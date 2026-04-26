@@ -14,7 +14,7 @@ export default function Notificaciones() {
   const notifications = useAuthStore((s) => s.notifications);
   const markAsRead    = useAuthStore((s) => s.markAsRead);
   const markAllAsRead = useAuthStore((s) => s.markAllAsRead);
-  const unread        = notifications.filter((n) => !n.read).length;
+  const unread        = useAuthStore((s) => s.unreadCount());
 
   function handleClick(n) {
     markAsRead(n.id);

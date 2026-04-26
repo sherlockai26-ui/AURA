@@ -37,8 +37,8 @@ export const useAuthStore = create(
       session: null,
       pendingWho: null,   // { email } — transient, no persisted
       _otps: {},          // { key: code } — transient, no persisted
-      user: null,         // Firebase User object — transient, no persisted
-      profileData: null,  // Firestore profiles doc — transient, no persisted
+      user: null,         // Auth user object — transient, no persisted
+      profileData: null,  // Profile data — transient, no persisted
       onboardingCompletado: false,
       sparks: 50,
       dailyFreeSpark: true,
@@ -51,6 +51,9 @@ export const useAuthStore = create(
         { id: 'n4', type: 'spark',   text: '¡Recarga tus Chispas! Solo tienes 5 ⚡',        timeAgo: 'hace 2 días',  read: false, path: '/monedero' },
         { id: 'n5', type: 'system',  text: 'Bienvenido a Aura. Completa tu perfil. ✨',     timeAgo: 'hace 3 días',  read: false, path: '/nido/editar' },
       ],
+      unreadCount() {
+        return get().notifications.filter((n) => !n.read).length;
+      },
 
       /* ── Match ───────────────────────────────────────────────────── */
       activeMatch: null,          // { matchId, otherUserId, otherNickname, chatExpiresAt, videoCallMinutesLeft, daysLeft, giftVideoUsed }
@@ -239,7 +242,7 @@ export const useAuthStore = create(
       },
 
       logout() {
-        set({ session: null, pendingWho: null });
+        set({ session: null, pendingWho: null, user: null, profileData: null });
       },
 
       /* ── Registration ────────────────────────────────────────────── */
@@ -380,7 +383,7 @@ export const useAuthStore = create(
         set((s) => {
           const next = { ...s.accounts };
           delete next[email];
-          return { accounts: next, session: null };
+          return { accounts: next, session: null, user: null, profileData: null };
         });
       },
 
@@ -517,7 +520,9 @@ if (auth) {
 
 export async function apiCall(endpoint, options = {}) {
   const { apiUrl } = useAuthStore.getState();
-  if (!apiUrl) return null;
+  if (!apiUrl) {
+    return { ok: true, mode: 'local', endpoint };
+  }
   const res = await fetch(`${apiUrl}${endpoint}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,

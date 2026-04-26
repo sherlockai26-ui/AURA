@@ -61,7 +61,7 @@ export default function App() {
         <Route path="/"              element={<RootRedirect />} />
         <Route path="/feed"          element={<Feed />} />
         <Route path="/destello"      element={<Placeholder title="Destello" subtitle="Videochat en pareja a 4 bandas (próximamente)" icon="⚡" />} />
-        <Route path="/notifications" element={<Placeholder title="Notificaciones" subtitle="Movimientos de tu Nido aparecerán aquí" icon="🔔" />} />
+        <Route path="/notifications" element={<Notificaciones />} />
         <Route path="/messages"      element={<EspejoChat />} />
         <Route path="/profile"       element={<Profile />} />
         {/* Zona de Match */}
@@ -78,8 +78,11 @@ export default function App() {
         {/* Nido */}
         <Route path="/nido"         element={<MiNido />} />
         <Route path="/nido/editar"  element={<EditarNido />} />
+        <Route path="/mi-nido"        element={<MiNido />} />
+        <Route path="/mi-nido/editar" element={<EditarNido />} />
         {/* Monedero */}
         <Route path="/monedero"        element={<Monedero />} />
+        <Route path="/wallet"          element={<Monedero />} />
         {/* Configuración */}
         <Route path="/seguridad"       element={<CentroSeguridad />} />
         <Route path="/notificaciones"  element={<Notificaciones />} />
