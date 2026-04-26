@@ -1,14 +1,23 @@
+import { useState } from 'react';
 import { useAuthStore } from '../lib/store.js';
 
 const PACKS = [
-  { label: '50 Chispas',  amount: 50,  price: '$29 MXN' },
-  { label: '150 Chispas', amount: 150, price: '$79 MXN' },
-  { label: '500 Chispas', amount: 500, price: '$199 MXN' },
+  { label: '50 Chispas',  amount: 50,  price: '$2.00 USD' },
+  { label: '150 Chispas', amount: 150, price: '$5.00 USD' },
+  { label: '300 Chispas', amount: 300, price: '$8.00 USD' },
+  { label: '500 Chispas', amount: 500, price: '$15.00 USD' },
 ];
 
 export default function Monedero() {
-  const sparks    = useAuthStore((s) => s.sparks);
-  const addSparks = useAuthStore((s) => s.addSparks);
+  const sparks     = useAuthStore((s) => s.sparks);
+  const addChispas = useAuthStore((s) => s.addChispas);
+  const [feedback, setFeedback] = useState('');
+
+  function handleRecargar(pack) {
+    addChispas(pack.amount);
+    setFeedback(`¡Recarga exitosa! +${pack.amount} Chispas ⚡`);
+    setTimeout(() => setFeedback(''), 3000);
+  }
 
   return (
     <div className="mx-auto max-w-[480px] px-4 py-6 text-white">
@@ -23,20 +32,31 @@ export default function Monedero() {
         </div>
       </div>
 
+      {feedback && (
+        <div className="mb-4 rounded-card bg-aura-cyan/10 border border-aura-cyan/40 px-4 py-3 text-center text-sm font-semibold text-aura-cyan">
+          {feedback}
+        </div>
+      )}
+
       <p className="text-sm font-semibold mb-3 text-white/80">Recargar</p>
       <div className="flex flex-col gap-3">
         {PACKS.map((pack) => (
           <button
             key={pack.amount}
             type="button"
-            onClick={() => addSparks(pack.amount)}
+            onClick={() => handleRecargar(pack)}
             className="flex items-center justify-between rounded-card border border-white/10 bg-aura-surface px-4 py-4 transition hover:border-aura-cyan active:scale-[.99]"
           >
             <div className="flex items-center gap-3">
               <span className="text-aura-cyan text-lg">⚡</span>
               <span className="font-semibold">{pack.label}</span>
             </div>
-            <span className="text-sm text-aura-text-2">{pack.price}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-aura-text-2">{pack.price}</span>
+              <span className="text-xs bg-aura-cyan/20 text-aura-cyan px-2 py-0.5 rounded-full">
+                Recargar
+              </span>
+            </div>
           </button>
         ))}
       </div>

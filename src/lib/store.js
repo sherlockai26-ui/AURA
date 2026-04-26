@@ -4,6 +4,10 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase.js';
 
+// API: Las llamadas al backend usarán la URL definida en VITE_API_URL.
+// Cuando el backend esté listo, las acciones de login, registro, perfil, chat y chispas
+// se enviarán a ${VITE_API_URL}/auth, /profile, /chat, /sparks, etc.
+
 /*
  * AccountRecord
  * {
@@ -38,6 +42,15 @@ export const useAuthStore = create(
       onboardingCompletado: false,
       sparks: 50,
       dailyFreeSpark: true,
+      apiUrl: import.meta.env.VITE_API_URL || '',
+
+      notifications: [
+        { id: 'n1', type: 'match',   text: 'Tienes un nuevo Match ❤️',                    timeAgo: 'hace 10 min',  read: false, path: '/zona-match' },
+        { id: 'n2', type: 'message', text: '@NidoAventura te ha enviado un mensaje 💬',     timeAgo: 'hace 1 hora',  read: false, path: '/messages' },
+        { id: 'n3', type: 'group',   text: 'Tu Cita Doble está lista 🎲',                  timeAgo: 'ayer',         read: false, path: '/cita-doble' },
+        { id: 'n4', type: 'spark',   text: '¡Recarga tus Chispas! Solo tienes 5 ⚡',        timeAgo: 'hace 2 días',  read: false, path: '/monedero' },
+        { id: 'n5', type: 'system',  text: 'Bienvenido a Aura. Completa tu perfil. ✨',     timeAgo: 'hace 3 días',  read: false, path: '/nido/editar' },
+      ],
 
       /* ── Match ───────────────────────────────────────────────────── */
       activeMatch: null,          // { matchId, otherUserId, otherNickname, chatExpiresAt, videoCallMinutesLeft, daysLeft, giftVideoUsed }
@@ -413,6 +426,43 @@ export const useAuthStore = create(
         const uid = get().user?.uid;
         if (uid) syncSparks(uid, get().sparks);
       },
+
+      /* ── Chispas (alias semántico para UI de Monedero) ───────────── */
+      addChispas(amount) {
+        set({ sparks: get().sparks + amount });
+        const uid = get().user?.uid;
+        if (uid) syncSparks(uid, get().sparks);
+      },
+      deductChispas(amount) {
+        if (get().sparks < amount) return false;
+        set({ sparks: get().sparks - amount });
+        const uid = get().user?.uid;
+        if (uid) syncSparks(uid, get().sparks);
+        return true;
+      },
+      getSaldoChispas() {
+        return get().sparks;
+      },
+
+      /* ── Notificaciones ──────────────────────────────────────────── */
+      markAsRead(id) {
+        set((s) => ({
+          notifications: s.notifications.map((n) =>
+            n.id === id ? { ...n, read: true } : n
+          ),
+        }));
+      },
+      markAllAsRead() {
+        set((s) => ({
+          notifications: s.notifications.map((n) => ({ ...n, read: true })),
+        }));
+      },
+      addNotification(notification) {
+        set((s) => ({
+          notifications: [notification, ...s.notifications],
+        }));
+      },
+
       completeOnboarding() { set({ onboardingCompletado: true }); },
 
       setUser(firebaseUser) { set({ user: firebaseUser }); },
@@ -430,6 +480,7 @@ export const useAuthStore = create(
         dailyLikesRemaining: s.dailyLikesRemaining,
         citaDoble: s.citaDoble,
         registrationData: s.registrationData,
+        notifications: s.notifications,
       }),
     }
   )
@@ -462,6 +513,16 @@ if (auth) {
       useAuthStore.getState().setProfileData(null);
     }
   });
+}
+
+export async function apiCall(endpoint, options = {}) {
+  const { apiUrl } = useAuthStore.getState();
+  if (!apiUrl) return null;
+  const res = await fetch(`${apiUrl}${endpoint}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  return res.json();
 }
 
 function slugify(s) {

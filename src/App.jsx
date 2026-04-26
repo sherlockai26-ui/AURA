@@ -21,6 +21,9 @@ import MiNido from './routes/MiNido.jsx';
 import EditarNido from './routes/EditarNido.jsx';
 import EspejoChat from './routes/EspejoChat.jsx';
 import Monedero from './routes/Monedero.jsx';
+import CentroSeguridad from './routes/CentroSeguridad.jsx';
+import Notificaciones from './routes/Notificaciones.jsx';
+import Legal from './routes/Legal.jsx';
 import { useAuthStore } from './lib/store.js';
 
 function RequireAuth({ children }) {
@@ -76,7 +79,11 @@ export default function App() {
         <Route path="/nido"         element={<MiNido />} />
         <Route path="/nido/editar"  element={<EditarNido />} />
         {/* Monedero */}
-        <Route path="/monedero"     element={<Monedero />} />
+        <Route path="/monedero"        element={<Monedero />} />
+        {/* Configuración */}
+        <Route path="/seguridad"       element={<CentroSeguridad />} />
+        <Route path="/notificaciones"  element={<Notificaciones />} />
+        <Route path="/legal"           element={<Legal />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
