@@ -436,30 +436,33 @@ export const useAuthStore = create(
 );
 
 async function syncSparks(uid, sparks) {
+  if (!db) return;
   try { await setDoc(doc(db, 'users', uid), { sparks }, { merge: true }); } catch {}
 }
 
 let _profileUnsub = null;
 
-onAuthStateChanged(auth, async (firebaseUser) => {
-  useAuthStore.getState().setUser(firebaseUser);
-  if (_profileUnsub) { _profileUnsub(); _profileUnsub = null; }
-  if (firebaseUser) {
-    try {
-      const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
-      if (snap.exists() && snap.data().sparks !== undefined) {
-        useAuthStore.setState({ sparks: snap.data().sparks });
-      }
-    } catch {}
-    _profileUnsub = onSnapshot(
-      doc(db, 'profiles', firebaseUser.uid),
-      (snap) => useAuthStore.getState().setProfileData(snap.exists() ? snap.data() : null),
-      () => {}
-    );
-  } else {
-    useAuthStore.getState().setProfileData(null);
-  }
-});
+if (auth) {
+  onAuthStateChanged(auth, async (firebaseUser) => {
+    useAuthStore.getState().setUser(firebaseUser);
+    if (_profileUnsub) { _profileUnsub(); _profileUnsub = null; }
+    if (firebaseUser && db) {
+      try {
+        const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (snap.exists() && snap.data().sparks !== undefined) {
+          useAuthStore.setState({ sparks: snap.data().sparks });
+        }
+      } catch {}
+      _profileUnsub = onSnapshot(
+        doc(db, 'profiles', firebaseUser.uid),
+        (snap) => useAuthStore.getState().setProfileData(snap.exists() ? snap.data() : null),
+        () => {}
+      );
+    } else {
+      useAuthStore.getState().setProfileData(null);
+    }
+  });
+}
 
 function slugify(s) {
   return String(s || '')
