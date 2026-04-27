@@ -5,11 +5,28 @@ const path    = require('path');
 const pool    = require('./db');
 const fs      = require('fs');
 
+const UNSAFE_SECRETS = ['CAMBIA_ESTO_POR_UN_SECRETO_LARGO_Y_ALEATORIO', 'change_this_secret_in_production', ''];
+if (!process.env.JWT_SECRET || UNSAFE_SECRETS.includes(process.env.JWT_SECRET)) {
+  console.error('⚠️  ADVERTENCIA: JWT_SECRET no está configurado o usa el valor por defecto. Cambia JWT_SECRET en tu archivo .env antes de usar en producción.');
+}
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// Express genera ETags por defecto y responde 304 si el body no cambió.
+// Para una API dinámica esto es incorrecto: siempre devolver datos frescos.
+app.set('etag', false);
+
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '1mb' }));
+
+// Todas las rutas /api/* nunca deben cachearse
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 // Serve uploaded files
 const uploadsDir = process.env.UPLOADS_DIR || '/uploads';

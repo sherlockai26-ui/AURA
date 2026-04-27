@@ -114,6 +114,10 @@ export async function apiCreatePost({ content, image_url }) {
   });
 }
 
+export async function apiDeletePost(postId) {
+  return request(`/api/posts/${postId}`, { method: 'DELETE' });
+}
+
 export async function apiToggleLike(postId) {
   return request(`/api/posts/${postId}/like`, { method: 'POST' });
 }

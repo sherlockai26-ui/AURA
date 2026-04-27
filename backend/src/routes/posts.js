@@ -149,4 +149,19 @@ router.post('/:id/comments', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/posts/:id  (solo el autor puede eliminar)
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      'DELETE FROM posts WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Publicación no encontrada o sin permiso.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('delete post error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
 module.exports = router;

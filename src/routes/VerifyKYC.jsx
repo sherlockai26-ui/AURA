@@ -53,9 +53,11 @@ export default function VerifyKYC() {
         </header>
 
         {/* Texto explicativo */}
-        <p className="mb-6 text-sm text-aura-text-2">
-          Escanea tu INE o Pasaporte para confirmar que eres mayor de edad.
-          Tus datos son procesados de forma segura y no se almacenan en nuestros servidores.
+        <p className="mb-3 text-sm text-aura-text-2">
+          Confirmación de mayoría de edad — paso obligatorio.
+        </p>
+        <p className="mb-6 rounded-card border border-aura-purple/30 bg-aura-surface/60 px-3 py-2 text-xs text-aura-text-2">
+          <span className="text-aura-purple font-semibold">Demo:</span> La verificación real con INE/Pasaporte estará disponible próximamente. Este paso es simulado.
         </p>
 
         {/* Zona de escaneo del documento */}
@@ -88,7 +90,7 @@ export default function VerifyKYC() {
               <p className="px-6 text-center text-sm text-aura-text-2">
                 {phase === 'scanning-doc'
                   ? 'Escaneando documento...'
-                  : 'Coloca aquí tu INE o Pasaporte'}
+                  : 'Pulsa el botón para simular la verificación'}
               </p>
             </div>
           )}
@@ -167,7 +169,7 @@ export default function VerifyKYC() {
           className="mt-auto flex items-center justify-center gap-1 pt-6 text-center text-aura-text-2"
           style={{ fontSize: 11 }}
         >
-          <span>🔒</span> Verificación segura · Datos no almacenados
+          <span>🪟</span> Paso demo · Sin datos reales almacenados
         </p>
 
       </main>

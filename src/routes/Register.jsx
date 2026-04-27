@@ -71,7 +71,7 @@ export default function Register() {
     if (!termsChecked) return isDuo
       ? 'Confirma que ambos son mayores de 18 años.'
       : 'Confirma que eres mayor de 18 años.';
-    if (!kycVerificado) return 'Debes verificar tu edad con INE o Pasaporte antes de continuar.';
+    if (!kycVerificado) return 'Completa el paso de verificación de edad para continuar.';
     return '';
   }
   function validateStep4() {
@@ -303,12 +303,12 @@ function StepPeople({ isDuo, p1, setP1, p2, setP2, termsChecked, onTermsChange, 
           <span className="text-aura-cyan" style={{ fontSize: 16 }}>🛡️</span>
           <p className="text-sm font-semibold text-white">Verificación de edad</p>
         </div>
-        <p className="mb-3 text-xs text-aura-text-2">Requerida para continuar. Escanea tu INE o Pasaporte.</p>
+        <p className="mb-3 text-xs text-aura-text-2">Verificación de identidad real próximamente. Por ahora completa el paso demo para continuar.</p>
         {kycVerificado ? (
-          <div className="flex items-center gap-2 text-sm text-aura-cyan"><span>✓</span><span className="font-medium">Edad verificada correctamente</span></div>
+          <div className="flex items-center gap-2 text-sm text-aura-cyan"><span>✓</span><span className="font-medium">Paso completado</span></div>
         ) : (
           <button type="button" onClick={onVerifyKYC} className="w-full rounded-pill border border-aura-purple bg-transparent py-3 text-sm font-semibold uppercase tracking-wider text-white transition hover:shadow-glow-purple active:scale-[.99]">
-            Verificar Edad con INE/Pasaporte
+            Verificar Edad (demo)
           </button>
         )}
       </div>

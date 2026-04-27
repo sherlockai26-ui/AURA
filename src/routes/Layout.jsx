@@ -16,8 +16,8 @@ export default function Layout() {
       <SideNav />
       <RightPanel />
 
-      <div className="md:pl-[240px] lg:pl-[260px] lg:pr-[300px] xl:pr-[340px]">
-        <div className="mx-auto w-full max-w-[480px] md:max-w-[640px] pb-[80px] md:pb-8">
+      <div className="md:pl-[240px] lg:pl-[260px] lg:pr-[300px] xl:pr-[340px] overflow-x-hidden">
+        <div className="mx-auto w-full max-w-[480px] md:max-w-[640px] pb-[80px] md:pb-8 overflow-x-hidden">
           <Outlet />
         </div>
       </div>

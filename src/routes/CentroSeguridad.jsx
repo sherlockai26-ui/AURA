@@ -62,40 +62,9 @@ export default function CentroSeguridad() {
       <div className="flex flex-col gap-3">
         {/* Cambiar contraseña */}
         <Section icon="🔑" title="Cambiar contraseña">
-          <form onSubmit={handlePwSubmit} className="flex flex-col gap-3 pt-3">
-            <input
-              type="password"
-              placeholder="Contraseña actual"
-              value={pwForm.current}
-              onChange={(e) => setPwForm((f) => ({ ...f, current: e.target.value }))}
-              className={inputCls}
-            />
-            <input
-              type="password"
-              placeholder="Nueva contraseña"
-              value={pwForm.next}
-              onChange={(e) => setPwForm((f) => ({ ...f, next: e.target.value }))}
-              className={inputCls}
-            />
-            <input
-              type="password"
-              placeholder="Confirmar nueva contraseña"
-              value={pwForm.confirm}
-              onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))}
-              className={inputCls}
-            />
-            {pwMsg && (
-              <p className={`text-xs ${pwMsg.includes('✓') ? 'text-aura-cyan' : 'text-red-400'}`}>
-                {pwMsg}
-              </p>
-            )}
-            <button
-              type="submit"
-              className="rounded-full bg-aura-purple py-2.5 text-sm font-semibold text-white hover:opacity-90 transition"
-            >
-              Actualizar contraseña
-            </button>
-          </form>
+          <p className="pt-3 text-sm text-aura-text-2">
+            Próximamente: podrás cambiar tu contraseña desde aquí.
+          </p>
         </Section>
 
         {/* Sesiones activas */}

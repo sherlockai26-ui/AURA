@@ -140,7 +140,7 @@ export default function Login() {
             <button type="button" onClick={() => navigate('/privacidad')} className="text-aura-text-2 hover:underline bg-transparent border-none p-0 cursor-pointer" style={{ fontSize: 10 }}>Política de Privacidad</button>.
           </p>
           <p className="flex items-center gap-1 text-aura-cyan" style={{ fontSize: 10 }}>
-            <span aria-hidden>🔒</span> Conexión segura E2E
+            <span aria-hidden>🔒</span> Conexión segura
           </p>
         </footer>
       </main>

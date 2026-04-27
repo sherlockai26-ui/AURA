@@ -58,13 +58,13 @@ export default function RightPanel() {
 
       {/* Privacidad */}
       <section className="rounded-card border border-white/5 bg-aura-surface/50 p-4 text-[11px] text-aura-text-2">
-        <p className="flex items-center gap-2 text-aura-cyan">
-          <span>🔒</span>
-          <span className="font-semibold text-white">Privacidad E2E activa</span>
+        <p className="flex items-center gap-2">
+          <span>🪟</span>
+          <span className="font-semibold text-white">Privacidad en desarrollo</span>
         </p>
         <p className="mt-1 leading-relaxed">
-          Rostros prohibidos en Vitrina pública. Captura de pantalla disuadida.
-          Watermark con tu identidad.
+          Watermark disuasorio activo en imágenes.
+          Cifrado E2E y verificación de identidad próximamente.
         </p>
       </section>
 

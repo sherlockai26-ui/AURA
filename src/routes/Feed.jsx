@@ -74,7 +74,7 @@ export default function Feed() {
       <QuickAccessRow />
       <StoriesRow />
 
-      <div className="mt-4">
+      <div className="mt-4 w-full max-w-2xl mx-auto overflow-x-hidden">
         {error && !loading && (
           <div className="mx-4 mb-4 rounded-card border border-aura-error/40 bg-aura-surface px-4 py-4 text-center">
             <p className="text-sm text-aura-error mb-2">{error}</p>
@@ -95,7 +95,11 @@ export default function Feed() {
         )}
 
         {posts.map((p) => (
-          <PostCard key={p.id} post={p} />
+          <PostCard
+            key={p.id}
+            post={p}
+            onDelete={(id) => setPosts((prev) => prev.filter((x) => x.id !== id))}
+          />
         ))}
 
         <div ref={sentinelRef} className="py-6 text-center text-xs text-aura-text-2">
