@@ -1,19 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
 import { DuoAvatar, MemberAvatar } from '../routes/WhoIsHere.jsx';
 import MenuDrawer from './MenuDrawer.jsx';
+import { apiGetNotifications } from '../lib/api.js';
 
 export default function TopHeader() {
   const sparks  = useAuthStore((s) => s.sparks);
   const session = useAuthStore((s) => s.session);
-  const account = useAuthStore((s) => s.accounts[s.session?.email] || null);
+  const cachedAccount = useAuthStore((s) => s.accounts[s.session?.email] || null);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
 
-  if (!account || !session) return null;
+  useEffect(() => {
+    if (!session) {
+      setUnread(0);
+      return undefined;
+    }
+    let cancelled = false;
+    async function loadNotifications() {
+      try {
+        const data = await apiGetNotifications();
+        if (!cancelled) {
+          setUnread((Array.isArray(data) ? data : []).filter((n) => !n.read).length);
+        }
+      } catch {
+        if (!cancelled) setUnread(0);
+      }
+    }
+    loadNotifications();
+    const id = setInterval(loadNotifications, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [session]);
 
-  const identity = session.identity;
+  if (!session) return null;
+
+  const account = cachedAccount || {
+    handle: session.handle,
+    mode: session.mode || 'single',
+    members: [{ handle: session.handle, name: session.handle }],
+  };
+
+  const identity = session.identity || 'member0';
   const member0  = account.members[0];
   const member1  = account.members[1];
   const isDuo    = account.mode === 'duo';
@@ -56,11 +88,16 @@ export default function TopHeader() {
             <span className="text-sm font-semibold">{sparks}</span>
           </Link>
 
-          <Link to="/notificaciones" aria-label="Notificaciones" className="text-aura-cyan">
+          <Link to="/notificaciones" aria-label="Notificaciones" className="relative text-aura-cyan">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2H4.5L6 16Z" strokeLinejoin="round" />
               <path d="M10 20a2 2 0 0 0 4 0" />
             </svg>
+            {unread > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-aura-error px-1 text-[10px] font-bold text-white">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
           </Link>
 
           <button

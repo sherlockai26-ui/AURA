@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import BottomTabBar from '../components/BottomTabBar.jsx';
 import SideNav from '../components/SideNav.jsx';
 import RightPanel from '../components/RightPanel.jsx';
+import PwaBar from '../components/PwaBar.jsx';
 
 /*
  * Layout responsive:
@@ -22,6 +23,7 @@ export default function Layout() {
       </div>
 
       <BottomTabBar />
+      <PwaBar />
     </div>
   );
 }

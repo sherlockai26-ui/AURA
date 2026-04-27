@@ -1,19 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase.js';
-import { uploadImage } from '../lib/uploadImage.js';
 import { useAuthStore } from '../lib/store.js';
+import { apiMe, apiUpdateProfile, apiUploadAvatar } from '../lib/api.js';
 
 export default function EditarNido() {
-  const navigate       = useNavigate();
-  const user           = useAuthStore((s) => s.user);
-  const profileData    = useAuthStore((s) => s.profileData);
-  const setProfileData = useAuthStore((s) => s.setProfileData);
+  const navigate  = useNavigate();
+  const session   = useAuthStore((s) => s.session);
 
   const [displayName, setDisplayName] = useState('');
   const [bio,         setBio]         = useState('');
-  const [tagsRaw,     setTagsRaw]     = useState('');
   const [photoURL,    setPhotoURL]    = useState('');
   const [saving,      setSaving]      = useState(false);
   const [uploading,   setUploading]   = useState(false);
@@ -21,36 +16,25 @@ export default function EditarNido() {
   const [success,     setSuccess]     = useState(false);
   const fileRef = useRef(null);
 
-  // Suscripción realtime al perfil
   useEffect(() => {
-    if (!user) return;
-    const unsub = onSnapshot(
-      doc(db, 'profiles', user.uid),
-      (snap) => setProfileData(snap.exists() ? snap.data() : null),
-      () => {}
-    );
-    return unsub;
-  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Pre-rellenar form cuando el perfil cambia
-  useEffect(() => {
-    if (!profileData) return;
-    setDisplayName(profileData.displayName || '');
-    setBio(profileData.bio || '');
-    setTagsRaw((profileData.tags || []).join(', '));
-    setPhotoURL(profileData.photoURL || '');
-  }, [profileData]);
+    apiMe()
+      .then((data) => {
+        setDisplayName(data.display_name || '');
+        setBio(data.bio || '');
+        setPhotoURL(data.avatar_url || '');
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onPhotoChange(e) {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
     setUploading(true);
     setError('');
     try {
-      const url = await uploadImage(file, `profiles/${user.uid}/avatar`);
-      setPhotoURL(url);
-      await setDoc(doc(db, 'profiles', user.uid), { photoURL: url, updatedAt: serverTimestamp() }, { merge: true });
-    } catch (err) {
+      const data = await apiUploadAvatar(file);
+      setPhotoURL(data.url);
+    } catch {
       setError('No se pudo subir la imagen.');
     } finally {
       setUploading(false);
@@ -60,17 +44,11 @@ export default function EditarNido() {
 
   async function onSave(e) {
     e.preventDefault();
-    if (!user) { setError('No hay sesión activa.'); return; }
     setSaving(true);
     setError('');
     setSuccess(false);
     try {
-      const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
-      await setDoc(
-        doc(db, 'profiles', user.uid),
-        { displayName: displayName.trim(), bio: bio.trim(), tags, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
+      await apiUpdateProfile({ display_name: displayName.trim(), bio: bio.trim() });
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'No pudimos guardar los cambios.');
@@ -78,6 +56,10 @@ export default function EditarNido() {
       setSaving(false);
     }
   }
+
+  const avatarSrc = photoURL
+    ? (photoURL.startsWith('data:') || photoURL.startsWith('http') || photoURL.startsWith('/') ? photoURL : `/${photoURL}`)
+    : null;
 
   return (
     <div className="mx-auto max-w-[480px] px-4 py-6 text-white">
@@ -95,8 +77,8 @@ export default function EditarNido() {
 
       {/* Foto de perfil */}
       <div className="flex flex-col items-center gap-3 mb-5">
-        {photoURL
-          ? <img src={photoURL} alt="Foto" className="w-24 h-24 rounded-full object-cover" />
+        {avatarSrc
+          ? <img src={avatarSrc} alt="Foto" className="w-24 h-24 rounded-full object-cover" />
           : <div className="w-24 h-24 rounded-full bg-aura-surface flex items-center justify-center text-3xl">🏠</div>
         }
         <button
@@ -132,17 +114,6 @@ export default function EditarNido() {
             maxLength={300}
             rows={4}
             className="w-full rounded-card bg-aura-surface px-4 py-3 text-white placeholder-aura-text-2 outline-none border border-transparent transition focus:border-aura-purple focus:shadow-glow-purple resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-aura-text-2 mb-1">Etiquetas (separadas por coma)</label>
-          <input
-            type="text"
-            value={tagsRaw}
-            onChange={(e) => setTagsRaw(e.target.value)}
-            placeholder="viajes, café, senderismo…"
-            className="w-full rounded-card bg-aura-surface px-4 py-4 text-white placeholder-aura-text-2 outline-none border border-transparent transition focus:border-aura-purple focus:shadow-glow-purple"
           />
         </div>
 

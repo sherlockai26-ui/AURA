@@ -3,15 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
 
 const MAX_SECS   = 3600; // 1 hora máximo
-const REPLIES = [
-  '¡Qué buena onda tienen! 😊',
-  'Totalmente de acuerdo con eso.',
-  'Jaja, igual aquí! 🙌',
-  '¿Y de dónde son todos?',
-  '¡Primera Cita Doble y ya me encanta! ✨',
-  'Esto está mucho mejor de lo que esperaba.',
-  'Hay una energía muy bonita en el grupo.',
-];
 
 function fmt(s) {
   const m   = Math.floor(s / 60).toString().padStart(2, '0');
@@ -28,13 +19,12 @@ export default function CitaDobleChat() {
   const sparks        = useAuthStore((s) => s.sparks);
 
   const participants  = citaDoble?.participants ?? [];
-  const others        = participants.filter((p) => p.id !== 'me');
-  const me            = participants.find((p) => p.id === 'me');
+  const hasParticipants = participants.length >= 2;
 
   const initSecs = citaDoble?.timeRemaining ?? 600;
   const [timeLeft, setTimeLeft]   = useState(initSecs);
   const [expired, setExpired]     = useState(false);
-  const [messages, setMessages]   = useState(() => buildSeedMsgs(others));
+  const [messages, setMessages]   = useState([]);
   const [draft, setDraft]         = useState('');
   const [extMsg, setExtMsg]       = useState('');
   const timerRef  = useRef(null);
@@ -59,21 +49,12 @@ export default function CitaDobleChat() {
 
   function sendMessage(e) {
     e.preventDefault();
-    if (!draft.trim()) return;
+    if (!draft.trim() || !hasParticipants) return;
     setMessages((prev) => [
       ...prev,
       { id: `m${Date.now()}`, pid: 'me', text: draft.trim() },
     ]);
     setDraft('');
-    if (others.length === 0) return;
-    const delay = 700 + Math.random() * 800;
-    setTimeout(() => {
-      const responder = others[Math.floor(Math.random() * others.length)];
-      setMessages((prev) => [
-        ...prev,
-        { id: `m${Date.now()}`, pid: responder.id, text: REPLIES[Math.floor(Math.random() * REPLIES.length)] },
-      ]);
-    }, delay);
   }
 
   function onExtend(seconds, cost) {
@@ -140,33 +121,41 @@ export default function CitaDobleChat() {
       {/* Mensajes */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
 
-        {/* Banner de videollamada */}
-        <button
-          type="button"
-          onClick={goVideo}
-          className="mb-4 w-full rounded-card border border-aura-purple/30 bg-aura-purple/10 px-4 py-3 text-left transition hover:bg-aura-purple/15 active:scale-[.99]"
-        >
-          <div className="flex items-center gap-3">
-            <span style={{ fontSize: 22 }}>🎬</span>
-            <div>
-              <p className="text-sm font-semibold text-aura-purple">Activar Videollamada grupal</p>
-              <p className="text-xs text-aura-text-2">4 cuadrantes · máx 1 hora</p>
+        {hasParticipants && (
+          <button
+            type="button"
+            onClick={goVideo}
+            className="mb-4 w-full rounded-card border border-aura-purple/30 bg-aura-purple/10 px-4 py-3 text-left transition hover:bg-aura-purple/15 active:scale-[.99]"
+          >
+            <div className="flex items-center gap-3">
+              <span style={{ fontSize: 22 }}>🎬</span>
+              <div>
+                <p className="text-sm font-semibold text-aura-purple">Activar Videollamada grupal</p>
+                <p className="text-xs text-aura-text-2">4 cuadrantes · máx 1 hora</p>
+              </div>
+              <span className="ml-auto text-aura-purple">→</span>
             </div>
-            <span className="ml-auto text-aura-purple">→</span>
-          </div>
-        </button>
+          </button>
+        )}
 
         {messages.map((msg) => (
           <GroupMessage key={msg.id} msg={msg} participants={participants} />
         ))}
+        {!hasParticipants && (
+          <p className="py-8 text-center text-sm text-aura-text-2">
+            Esta sala no tiene participantes reales.
+          </p>
+        )}
         <div ref={bottomRef} />
       </div>
 
       {/* Chips de extensión */}
-      <div className="flex gap-2 overflow-x-auto px-4 py-2 no-scrollbar">
-        <ExtChip label="+10 min" cost={80}  onClick={() => onExtend(600,  80)}  disabled={sparks < 80} />
-        <ExtChip label="+30 min" cost={200} onClick={() => onExtend(1800, 200)} disabled={sparks < 200} />
-      </div>
+      {hasParticipants && (
+        <div className="flex gap-2 overflow-x-auto px-4 py-2 no-scrollbar">
+          <ExtChip label="+10 min" cost={80}  onClick={() => onExtend(600,  80)}  disabled={sparks < 80} />
+          <ExtChip label="+30 min" cost={200} onClick={() => onExtend(1800, 200)} disabled={sparks < 200} />
+        </div>
+      )}
       {extMsg && <p className="px-4 pb-1 text-center text-xs text-aura-cyan">{extMsg}</p>}
 
       {/* Input */}
@@ -178,11 +167,12 @@ export default function CitaDobleChat() {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escribe algo al grupo…"
+          disabled={!hasParticipants}
           className="flex-1 rounded-pill bg-aura-bg px-4 py-3 text-sm text-white placeholder-aura-text-2 outline-none border border-transparent focus:border-aura-purple transition"
         />
         <button
           type="submit"
-          disabled={!draft.trim()}
+          disabled={!hasParticipants || !draft.trim()}
           className="shrink-0 rounded-full bg-aura-purple p-3 transition disabled:opacity-40 hover:opacity-90 active:scale-90"
           aria-label="Enviar"
         >
@@ -193,7 +183,7 @@ export default function CitaDobleChat() {
       </form>
 
       {/* Overlay de tiempo expirado */}
-      {expired && (
+      {expired && hasParticipants && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/85 px-8 text-center backdrop-blur-sm">
           <p style={{ fontSize: 48 }}>⏳</p>
           <h2 className="text-xl font-semibold">El tiempo terminó</h2>
@@ -276,17 +266,4 @@ function ExtChip({ label, cost, onClick, disabled, big }) {
       {label} <span className="text-aura-cyan">({cost} ⚡)</span>
     </button>
   );
-}
-
-function buildSeedMsgs(others) {
-  const seeds = [
-    '¡Hola a todos! Primera vez en Cita Doble 👋',
-    '¡Qué buena energía tiene este grupo! 💜',
-    'Feliz de estar aquí, ¿de dónde son? ✨',
-  ];
-  return others.slice(0, 3).map((p, i) => ({
-    id: `seed-${i}`,
-    pid: p.id,
-    text: seeds[i] ?? seeds[0],
-  }));
 }

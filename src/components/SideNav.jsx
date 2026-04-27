@@ -8,17 +8,23 @@ import { DuoAvatar, MemberAvatar } from '../routes/WhoIsHere.jsx';
 export default function SideNav() {
   const navigate = useNavigate();
   const session  = useAuthStore((s) => s.session);
-  const account  = useAuthStore((s) => s.accounts[s.session?.email] || null);
+  const cachedAccount = useAuthStore((s) => s.accounts[s.session?.email] || null);
   const logout   = useAuthStore((s) => s.logout);
 
-  if (!session || !account) return null;
+  if (!session) return null;
+
+  const account = cachedAccount || {
+    handle: session.handle,
+    mode: session.mode || 'single',
+    members: [{ handle: session.handle, name: session.handle }],
+  };
 
   const isSingle = account.mode === 'single';
   const items    = isSingle
     ? navItems.map((item) => (item.to === '/destello' ? matchNavItem : item))
     : navItems;
 
-  const identity = session.identity;
+  const identity = session.identity || 'member0';
   const activeMember = identity === 'member0' ? account.members[0]
                       : identity === 'member1' ? account.members[1]
                       : null;

@@ -6,7 +6,9 @@ import { useAuthStore } from '../lib/store.js';
 export default function BottomTabBar() {
   const session  = useAuthStore((s) => s.session);
   const accounts = useAuthStore((s) => s.accounts);
-  const account  = session ? accounts[session.email] : null;
+  const account  = session
+    ? (accounts[session.email] || { mode: session.mode || 'single' })
+    : null;
   const isSingle = account?.mode === 'single';
 
   // Usuarios Single ven Zona de Match en lugar de Destello.

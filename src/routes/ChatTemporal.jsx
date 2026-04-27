@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
+import { apiGetMessages, apiSendMessage } from '../lib/api.js';
 
 function fmt(s) {
   const h   = Math.floor(s / 3600);
@@ -9,15 +10,10 @@ function fmt(s) {
   return h > 0 ? `${h}:${m}:${sec}` : `${m}:${sec}`;
 }
 
-const SEED_MSGS = [
-  { id: 'm1', from: 'other', text: '¡Hola! Me alegra que hayamos coincidido 😊' },
-  { id: 'm2', from: 'me',    text: 'A mí también, vi tu perfil y sentí que teníamos cosas en común.' },
-  { id: 'm3', from: 'other', text: '¿Qué te llevó a estar aquí en AURA?' },
-];
-
 export default function ChatTemporal() {
   const { matchId }    = useParams();
   const navigate       = useNavigate();
+  const session        = useAuthStore((s) => s.session);
   const activeMatch    = useAuthStore((s) => s.activeMatch);
   const setActiveMatch = useAuthStore((s) => s.setActiveMatch);
   const clearMatch     = useAuthStore((s) => s.clearActiveMatch);
@@ -25,7 +21,7 @@ export default function ChatTemporal() {
   const sparks         = useAuthStore((s) => s.sparks);
 
   const match        = activeMatch;
-  const otherName    = match?.otherNickname ?? 'Conexión';
+  const otherName    = match?.otherNickname ?? 'Chat de match';
   const giftVideoUsed = match?.giftVideoUsed ?? false;
   const daysLeft     = match?.daysLeft ?? 3;
 
@@ -36,7 +32,10 @@ export default function ChatTemporal() {
 
   const [timeLeft, setTimeLeft]     = useState(initSecs);
   const [expired, setExpired]       = useState(timeLeft === 0);
-  const [messages, setMessages]     = useState(SEED_MSGS);
+  const [messages, setMessages]     = useState([]);
+  const [loadingMsgs, setLoadingMsgs] = useState(true);
+  const [msgError, setMsgError]     = useState('');
+  const [sending, setSending]       = useState(false);
   const [draft, setDraft]           = useState('');
   const [extMsg, setExtMsg]         = useState('');
   const bottomRef                   = useRef(null);
@@ -60,28 +59,49 @@ export default function ChatTemporal() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  function sendMessage(e) {
+  useEffect(() => {
+    let cancelled = false;
+    let pollId;
+
+    async function load() {
+      if (!matchId) return;
+      try {
+        const data = await apiGetMessages(matchId);
+        if (!cancelled) {
+          setMessages(Array.isArray(data) ? data : []);
+          setMsgError('');
+        }
+      } catch (err) {
+        if (!cancelled) setMsgError(err.message || 'No se pudieron cargar los mensajes.');
+      } finally {
+        if (!cancelled) setLoadingMsgs(false);
+      }
+    }
+
+    load();
+    pollId = setInterval(load, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(pollId);
+    };
+  }, [matchId]);
+
+  async function sendMessage(e) {
     e.preventDefault();
     if (!draft.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: `m${Date.now()}`, from: 'me', text: draft.trim() },
-    ]);
-    setDraft('');
-    // Respuesta automática demo tras 800ms
-    setTimeout(() => {
-      const replies = [
-        '¡Interesante! Cuéntame más.',
-        'Eso resuena mucho conmigo.',
-        '¿En serio? Yo también.',
-        'Me gusta cómo piensas.',
-        '¿Y qué te gustaría hacer si nos conociéramos en persona?',
-      ];
-      setMessages((prev) => [
-        ...prev,
-        { id: `m${Date.now() + 1}`, from: 'other', text: replies[Math.floor(Math.random() * replies.length)] },
-      ]);
-    }, 800 + Math.random() * 600);
+    const content = draft.trim();
+    setSending(true);
+    setMsgError('');
+    try {
+      await apiSendMessage(matchId, content);
+      setDraft('');
+      const data = await apiGetMessages(matchId);
+      setMessages(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setMsgError(err.message || 'No se pudo enviar el mensaje.');
+    } finally {
+      setSending(false);
+    }
   }
 
   function extend(seconds, cost) {
@@ -187,8 +207,17 @@ export default function ChatTemporal() {
           </button>
         )}
 
+        {loadingMsgs && (
+          <p className="py-6 text-center text-xs text-aura-text-2">Cargando mensajes…</p>
+        )}
+        {msgError && !loadingMsgs && (
+          <p className="py-6 text-center text-xs text-aura-error">{msgError}</p>
+        )}
+        {!loadingMsgs && !msgError && messages.length === 0 && (
+          <p className="py-6 text-center text-xs text-aura-text-2">Sin mensajes aún.</p>
+        )}
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} />
+          <MessageBubble key={msg.id} msg={msg} viewerId={session?.id} />
         ))}
         <div ref={bottomRef} />
       </div>
@@ -219,7 +248,7 @@ export default function ChatTemporal() {
         />
         <button
           type="submit"
-          disabled={!draft.trim()}
+          disabled={sending || !draft.trim()}
           className="shrink-0 rounded-full bg-aura-purple p-3 transition disabled:opacity-40 hover:opacity-90 active:scale-90"
           aria-label="Enviar"
         >
@@ -257,8 +286,9 @@ export default function ChatTemporal() {
 
 /* ── Sub-componentes ─────────────────────────────────────────────── */
 
-function MessageBubble({ msg }) {
-  const isMe = msg.from === 'me';
+function MessageBubble({ msg, viewerId }) {
+  const isMe = msg.sender_id ? msg.sender_id === viewerId : msg.from === 'me';
+  const text = msg.content || msg.text || '';
   return (
     <div className={`mb-3 flex ${isMe ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -269,7 +299,12 @@ function MessageBubble({ msg }) {
           borderBottomLeftRadius:  isMe ? undefined : 4,
         }}
       >
-        {msg.text}
+        {!isMe && msg.handle && (
+          <Link to={`/profile/${msg.sender_id}`} className="mb-0.5 block text-[10px] text-aura-cyan hover:underline">
+            @{msg.handle}
+          </Link>
+        )}
+        {text}
       </div>
     </div>
   );

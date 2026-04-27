@@ -6,6 +6,7 @@ import WhoIsHere from './routes/WhoIsHere.jsx';
 import Layout from './routes/Layout.jsx';
 import Feed from './routes/Feed.jsx';
 import Profile from './routes/Profile.jsx';
+import PublicProfile from './routes/PublicProfile.jsx';
 import Placeholder from './routes/Placeholder.jsx';
 import ZonaMatch from './routes/ZonaMatch.jsx';
 import ChatTemporal from './routes/ChatTemporal.jsx';
@@ -24,6 +25,7 @@ import Monedero from './routes/Monedero.jsx';
 import CentroSeguridad from './routes/CentroSeguridad.jsx';
 import Notificaciones from './routes/Notificaciones.jsx';
 import Legal from './routes/Legal.jsx';
+import Tareas from './routes/Tareas.jsx';
 import { useAuthStore } from './lib/store.js';
 
 function RequireAuth({ children }) {
@@ -64,6 +66,7 @@ export default function App() {
         <Route path="/notifications" element={<Notificaciones />} />
         <Route path="/messages"      element={<EspejoChat />} />
         <Route path="/profile"       element={<Profile />} />
+        <Route path="/profile/:userId" element={<PublicProfile />} />
         {/* Zona de Match */}
         <Route path="/zona-match"                      element={<ZonaMatch />} />
         <Route path="/zona-match/chat/:matchId"        element={<ChatTemporal />} />
@@ -87,6 +90,7 @@ export default function App() {
         <Route path="/seguridad"       element={<CentroSeguridad />} />
         <Route path="/notificaciones"  element={<Notificaciones />} />
         <Route path="/legal"           element={<Legal />} />
+        <Route path="/tareas"          element={<Tareas />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

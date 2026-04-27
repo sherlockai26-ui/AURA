@@ -13,7 +13,7 @@ import { DuoAvatar, MemberAvatar } from '../routes/WhoIsHere.jsx';
 export default function MenuDrawer({ open, onClose }) {
   const navigate         = useNavigate();
   const session          = useAuthStore((s) => s.session);
-  const account          = useAuthStore((s) => s.accounts[s.session?.email] || null);
+  const cachedAccount    = useAuthStore((s) => s.accounts[s.session?.email] || null);
   const finalizeIdentity = useAuthStore((s) => s.finalizeIdentity);
   const generateOtp      = useAuthStore((s) => s.generateOtp);
   const verifyOtp        = useAuthStore((s) => s.verifyOtp);
@@ -44,9 +44,15 @@ export default function MenuDrawer({ open, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!session || !account) return null;
+  if (!session) return null;
 
-  const identity = session.identity;
+  const account = cachedAccount || {
+    handle: session.handle,
+    mode: session.mode || 'single',
+    members: [{ handle: session.handle, name: session.display_name || session.handle }],
+  };
+
+  const identity = session.identity || 'member0';
   const isDuo    = account.mode === 'duo';
 
   // ── Acciones ───────────────────────────────────────────────────────

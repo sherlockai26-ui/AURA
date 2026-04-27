@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import BrandLogo from '../components/BrandLogo.jsx';
 import Particles from '../components/Particles.jsx';
 import { useAuthStore } from '../lib/store.js';
-import { auth } from '../lib/firebase.js';
+import { apiLogin } from '../lib/api.js';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
 export default function Login() {
-  const navigate    = useNavigate();
-  const login       = useAuthStore((s) => s.login);
-  const session     = useAuthStore((s) => s.session);
-  const pendingWho  = useAuthStore((s) => s.pendingWho);
+  const navigate   = useNavigate();
+  const setSession = useAuthStore((s) => s.setSession);
+  const session    = useAuthStore((s) => s.session);
+  const pendingWho = useAuthStore((s) => s.pendingWho);
 
-  useEffect(() => { if (session)    navigate('/feed',          { replace: true }); }, [session, navigate]);
-  useEffect(() => { if (pendingWho) navigate('/who-is-here',   { replace: true }); }, [pendingWho, navigate]);
+  useEffect(() => { if (session)    navigate('/feed',        { replace: true }); }, [session, navigate]);
+  useEffect(() => { if (pendingWho) navigate('/who-is-here', { replace: true }); }, [pendingWho, navigate]);
 
   const [identifier,   setIdentifier]   = useState('');
   const [password,     setPassword]     = useState('');
@@ -37,16 +36,15 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      if (EMAIL_RE.test(identifier.trim()) && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-        try {
-          await signInWithEmailAndPassword(auth, identifier.trim(), password);
-        } catch (fbErr) {
-          const msg = translateFbError(fbErr.code);
-          if (msg) throw new Error(msg);
-        }
-      }
-      const { needsWho } = login(identifier.trim(), password);
-      if (!needsWho) navigate('/feed', { replace: true });
+      const data = await apiLogin({ identifier: identifier.trim(), password });
+      setSession({
+        id: data.user.id,
+        email: data.user.email,
+        handle: data.user.handle,
+        mode: data.user.mode,
+        display_name: data.user.display_name,
+      });
+      navigate('/feed', { replace: true });
     } catch (err) {
       setError(err.message || 'No pudimos iniciarte sesión.');
     } finally {
@@ -148,17 +146,4 @@ export default function Login() {
       </main>
     </div>
   );
-}
-
-function translateFbError(code) {
-  const map = {
-    'auth/user-not-found':         'Usuario no encontrado.',
-    'auth/wrong-password':         'Contraseña incorrecta.',
-    'auth/invalid-credential':     'Credenciales incorrectas.',
-    'auth/invalid-email':          'Correo inválido.',
-    'auth/too-many-requests':      'Demasiados intentos. Intenta más tarde.',
-    'auth/network-request-failed': 'Error de conexión. Verifica tu internet.',
-    'auth/user-disabled':          'Esta cuenta ha sido desactivada.',
-  };
-  return map[code] || null;
 }

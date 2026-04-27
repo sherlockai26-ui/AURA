@@ -1,31 +1,17 @@
 import { useRef, useState } from 'react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase.js';
-import { uploadImage } from '../lib/uploadImage.js';
-import { useAuthStore } from '../lib/store.js';
+import { apiUploadImage } from '../lib/api.js';
 
 export default function StatusBox({ onOpenComposer }) {
-  const user    = useAuthStore((s) => s.user);
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
   async function onFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!user || !import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-      onOpenComposer();
-      return;
-    }
     setUploading(true);
     try {
-      const path = `posts/${user.uid}/${Date.now()}_${file.name}`;
-      const url  = await uploadImage(file, path);
-      await setDoc(
-        doc(db, 'users', user.uid),
-        { lastPostImageURL: url, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-      onOpenComposer(url);
+      const data = await apiUploadImage(file);
+      onOpenComposer(data.url);
     } catch {
       onOpenComposer();
     } finally {
@@ -41,7 +27,7 @@ export default function StatusBox({ onOpenComposer }) {
     >
       <button
         type="button"
-        onClick={onOpenComposer}
+        onClick={() => onOpenComposer()}
         className="block w-full text-left text-aura-text-2 rounded-card bg-aura-bg/60 px-3 py-3"
       >
         Comparte algo con tu pareja…
@@ -59,7 +45,7 @@ export default function StatusBox({ onOpenComposer }) {
         <span className="h-5 w-px bg-white/10" aria-hidden />
         <button
           type="button"
-          onClick={onOpenComposer}
+          onClick={() => onOpenComposer()}
           className="flex flex-1 items-center justify-center gap-2 py-2 text-aura-purple"
         >
           <span aria-hidden>🎥</span>

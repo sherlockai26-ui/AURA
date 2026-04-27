@@ -1,7 +1,10 @@
-// Silueta abstracta para stories: gradiente determinista según `seed`.
-export default function StoryItem({ handle, unseen, seed = 0, isCreate = false, onClick }) {
+export default function StoryItem({ handle, unseen, imageUrl, avatarUrl, isCreate = false, onClick }) {
+  const media = imageUrl || avatarUrl;
+  const initial = String(handle || '?').replace('@', '').charAt(0).toUpperCase() || '?';
+
   return (
     <button
+      type="button"
       onClick={onClick}
       className="flex shrink-0 flex-col items-center gap-1"
       style={{ width: 72 }}
@@ -21,8 +24,10 @@ export default function StoryItem({ handle, unseen, seed = 0, isCreate = false, 
         >
           {isCreate ? (
             <span className="text-aura-purple text-2xl leading-none">+</span>
+          ) : media ? (
+            <img src={media} alt={handle} className="h-full w-full object-cover" />
           ) : (
-            <Silhouette seed={seed} />
+            <span className="text-lg font-semibold text-aura-cyan">{initial}</span>
           )}
         </span>
       </span>
@@ -30,24 +35,5 @@ export default function StoryItem({ handle, unseen, seed = 0, isCreate = false, 
         {handle}
       </span>
     </button>
-  );
-}
-
-function Silhouette({ seed }) {
-  const a = ['#9D4EDD', '#00F5D4', '#1F2833'];
-  const c1 = a[seed % 3];
-  const c2 = a[(seed + 1) % 3];
-  return (
-    <svg width="60" height="60" viewBox="0 0 60 60" aria-hidden>
-      <defs>
-        <linearGradient id={`g${seed}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={c1} />
-          <stop offset="1" stopColor={c2} />
-        </linearGradient>
-      </defs>
-      <rect width="60" height="60" fill="#0B0C10" />
-      <circle cx="30" cy="24" r="10" fill={`url(#g${seed})`} opacity="0.85" />
-      <path d="M10 56 C 14 40, 46 40, 50 56 Z" fill={`url(#g${seed})`} opacity="0.7" />
-    </svg>
   );
 }

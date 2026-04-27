@@ -1,39 +1,15 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuthStore } from '../lib/store.js';
 import { CitaDobleIcon } from '../components/NavIcons.jsx';
 
-const ENTRY_COST     = 60;
-const INVITE_COST    = 150;
-
-// Participantes mock que llenan el grupo
-const MOCK_OTHERS = [
-  { id: 'p1', type: 'single', label: 'Leo',        handle: '@LeoSierra',  color: '#00F5D4', emoji: '👤' },
-  { id: 'p2', type: 'duo',    label: 'Luna & Sol',  handle: '@LunaSol',    color: '#9D4EDD', emoji: '👫' },
-  { id: 'p3', type: 'single', label: 'Iris',        handle: '@IrisNoche',  color: '#00F5D4', emoji: '👤' },
-];
-
-// Tiempos (ms) en que cada participante "aparece" durante la búsqueda
-const FIND_DELAYS = [1600, 3000, 4400];
-
 export default function CitaDoblePortal() {
-  const navigate        = useNavigate();
   const session         = useAuthStore((s) => s.session);
-  const accounts        = useAuthStore((s) => s.accounts);
   const sparks          = useAuthStore((s) => s.sparks);
-  const spendSpark      = useAuthStore((s) => s.spendSpark);
   const citaDoble       = useAuthStore((s) => s.citaDoble);
-  const startSearch     = useAuthStore((s) => s.startSearch);
-  const cancelSearch    = useAuthStore((s) => s.cancelSearch);
-  const joinSession     = useAuthStore((s) => s.joinSession);
-  const decrementFree   = useAuthStore((s) => s.decrementFreeEntry);
 
-  const account    = session ? accounts[session.email] : null;
-  const myType     = account?.mode === 'duo' ? 'duo' : 'single';
-  const myHandle   = account?.handle ?? 'yo';
-  const myLabel    = myType === 'duo'
-    ? (account?.handle ?? 'Mi Dúo')
-    : (account?.members?.[0]?.name ?? 'Yo');
+  const myType     = session?.mode === 'duo' ? 'duo' : 'single';
+  const myHandle   = session?.handle ?? 'yo';
+  const myLabel    = session?.display_name || session?.handle || 'Tú';
 
   const myParticipant = {
     id: 'me',
@@ -45,10 +21,8 @@ export default function CitaDoblePortal() {
   };
 
   const freeToday   = citaDoble?.freeEntriesToday ?? 1;
-  const isSearching = citaDoble?.isSearching ?? false;
 
-  const [found, setFound]     = useState([]);  // índices de MOCK_OTHERS descubiertos
-  const [complete, setComplete] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [toast, setToast]      = useState('');
 
   function showToast(msg) {
@@ -56,57 +30,17 @@ export default function CitaDoblePortal() {
     setTimeout(() => setToast(''), 2400);
   }
 
-  // Simulación de búsqueda: participantes aparecen progresivamente
-  useEffect(() => {
-    if (!isSearching) return;
-    let cancelled = false;
-
-    const timers = FIND_DELAYS.map((delay, i) =>
-      setTimeout(() => {
-        if (cancelled) return;
-        setFound((f) => [...f, i]);
-
-        if (i === MOCK_OTHERS.length - 1) {
-          // Grupo completo
-          setTimeout(() => {
-            if (cancelled) return;
-            setComplete(true);
-            const sid = `cd-${Date.now()}`;
-            joinSession(sid, [myParticipant, ...MOCK_OTHERS]);
-            setTimeout(() => {
-              if (!cancelled) navigate(`/cita-doble/sala/${sid}`);
-            }, 700);
-          }, 900);
-        }
-      }, delay)
-    );
-
-    return () => {
-      cancelled = true;
-      timers.forEach(clearTimeout);
-    };
-  }, [isSearching]); // eslint-disable-line react-hooks/exhaustive-deps
-
   function onSearch() {
-    if (freeToday > 0) {
-      decrementFree();
-    } else {
-      if (!spendSpark(ENTRY_COST)) { showToast(`Sin Chispas suficientes (${ENTRY_COST} ⚡)`); return; }
-    }
-    setFound([]);
-    setComplete(false);
-    startSearch();
+    setIsSearching(true);
+    showToast('Aún no hay participantes reales disponibles para Cita Doble.');
   }
 
   function onCancel() {
-    cancelSearch();
-    setFound([]);
-    setComplete(false);
+    setIsSearching(false);
   }
 
   function onInvite() {
-    if (!spendSpark(INVITE_COST)) { showToast(`Sin Chispas suficientes (${INVITE_COST} ⚡)`); return; }
-    showToast(`Invitación enviada (${INVITE_COST} ⚡ usados)`);
+    showToast('Las invitaciones reales de Cita Doble aún no están conectadas.');
   }
 
   return (
@@ -133,7 +67,7 @@ export default function CitaDoblePortal() {
             <div>
               <p className="text-sm font-semibold">Tu entrada hoy</p>
               <p className="mt-0.5 text-xs text-aura-text-2">
-                {freeToday > 0 ? '1/1 gratis disponible' : 'Entrada extra requerida'}
+                {freeToday > 0 ? '1/1 gratis disponible' : 'Sin entrada gratuita disponible'}
               </p>
             </div>
             <div
@@ -144,14 +78,14 @@ export default function CitaDoblePortal() {
                 border: `1px solid ${freeToday > 0 ? 'rgba(0,245,212,0.3)' : 'rgba(157,78,221,0.3)'}`,
               }}
             >
-              {freeToday > 0 ? 'GRATIS' : `${ENTRY_COST} ⚡`}
+              {freeToday > 0 ? 'GRATIS' : 'NO DISP.'}
             </div>
           </div>
         </div>
 
         {/* Zona de búsqueda / animación */}
         <div className="relative mb-6 flex flex-col items-center justify-center" style={{ minHeight: 200 }}>
-          {isSearching && !complete ? (
+          {isSearching ? (
             <>
               {/* Anillos expansivos */}
               <div className="relative flex items-center justify-center" style={{ width: 180, height: 180 }}>
@@ -180,11 +114,6 @@ export default function CitaDoblePortal() {
               </div>
               <p className="mt-3 text-sm text-aura-cyan animate-pulse">Buscando participantes…</p>
             </>
-          ) : complete ? (
-            <div className="flex flex-col items-center gap-2">
-              <span style={{ fontSize: 48 }}>🎉</span>
-              <p className="font-semibold text-aura-cyan">¡Grupo completo! Entrando…</p>
-            </div>
           ) : (
             <div className="flex flex-col items-center gap-2 opacity-40">
               <CitaDobleIcon active={false} size={48} />
@@ -204,15 +133,20 @@ export default function CitaDoblePortal() {
           {/* Mi slot (siempre presente) */}
           <ParticipantSlot participant={myParticipant} found label="Tú" />
           {/* Otros slots */}
-          {MOCK_OTHERS.map((p, i) => (
+          {Array.from({ length: 3 }, (_, i) => (
             <ParticipantSlot
-              key={p.id}
-              participant={p}
-              found={found.includes(i)}
-              searching={isSearching && !found.includes(i)}
+              key={i}
+              found={false}
+              searching={isSearching}
             />
           ))}
         </div>
+
+        {isSearching && (
+          <p className="mb-4 text-center text-sm text-aura-text-2">
+            Aún no hay participantes reales disponibles.
+          </p>
+        )}
 
         {/* Botones de acción */}
         <div className="flex w-full flex-col gap-3">
@@ -223,16 +157,15 @@ export default function CitaDoblePortal() {
                 onClick={onSearch}
                 className="w-full rounded-pill bg-aura-cyan py-4 font-semibold uppercase tracking-wider text-aura-bg shadow-glow-cyan transition hover:opacity-90 active:scale-[.99]"
               >
-                {freeToday > 0 ? 'Buscar Cita Doble (gratis)' : `Buscar Cita Doble (${ENTRY_COST} ⚡)`}
+                Buscar Cita Doble
               </button>
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={onInvite}
-                  disabled={sparks < INVITE_COST}
                   className="flex-1 rounded-pill border border-aura-purple bg-transparent py-3 text-sm font-semibold text-white transition hover:shadow-glow-purple active:scale-[.99] disabled:opacity-40"
                 >
-                  Invitar a Cita ({INVITE_COST} ⚡)
+                  Invitar a Cita
                 </button>
               </div>
             </>

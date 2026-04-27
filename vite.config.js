@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
@@ -44,5 +44,19 @@ export default defineConfig({
       },
     }),
   ],
-  server: { host: true, port: 5173 },
+  server: {
+    host: true,
+    port: 5173,
+    // Dev proxy: /api y /uploads apuntan al backend local
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_URL_DEV || 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: process.env.VITE_API_URL_DEV || 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
 });

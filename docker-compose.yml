@@ -1,28 +1,56 @@
-# docker-compose para AURA. Ajusta PORT y BASE_PATH según tu setup.
-#
-#   docker compose build
-#   docker compose up -d
-#
-# Variables soportadas (en .env o exportadas):
-#   PORT       → puerto del host donde nginx del proxy reverso apunta. Default 8080.
-#   BASE_PATH  → ruta donde se sirve. Default "/" (dominio raíz).
-
 services:
-  aura:
+  frontend:
     build:
       context: .
+      dockerfile: Dockerfile
       args:
         BASE_PATH: ${BASE_PATH:-/}
-    image: aura:latest
-    container_name: aura
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    image: aura-frontend:latest
+    container_name: aura-frontend
     restart: unless-stopped
     ports:
       - "${PORT:-8080}:80"
-    # Si tu reverse proxy (nginx/traefik) corre en otra red Docker,
-    # descomenta esto y conéctalo a esa red:
-    # networks:
-    #   - web
+    depends_on:
+      backend:
+        condition: service_started
 
-# networks:
-#   web:
-#     external: true
+  backend:
+    build:
+      context: ./backend
+    image: aura-backend:latest
+    container_name: aura-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-3001}:3000"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-aura}:${POSTGRES_PASSWORD:-aurapass}@postgres:5432/${POSTGRES_DB:-auradb}
+      JWT_SECRET: ${JWT_SECRET:-change_this_secret_in_production}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      UPLOADS_DIR: /uploads
+      PORT: 3000
+    volumes:
+      - uploads_data:/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: aura-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aura}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aurapass}
+      POSTGRES_DB: ${POSTGRES_DB:-auradb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aura} -d ${POSTGRES_DB:-auradb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  uploads_data:

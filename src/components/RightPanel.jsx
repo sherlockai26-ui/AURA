@@ -5,9 +5,15 @@ import { useAuthStore } from '../lib/store.js';
 export default function RightPanel() {
   const sparks  = useAuthStore((s) => s.sparks);
   const session = useAuthStore((s) => s.session);
-  const account = useAuthStore((s) => s.accounts[s.session?.email] || null);
+  const cachedAccount = useAuthStore((s) => s.accounts[s.session?.email] || null);
 
-  if (!session || !account) return null;
+  if (!session) return null;
+
+  const account = cachedAccount || {
+    handle: session.handle,
+    mode: session.mode || 'single',
+    members: [{ handle: session.handle, name: session.handle }],
+  };
 
   const isDuo = account.mode === 'duo';
 
