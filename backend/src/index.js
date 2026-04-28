@@ -53,6 +53,7 @@ app.use('/api/tasks',  require('./routes/tasks'));
 app.use('/api/videos',     require('./routes/videos'));
 app.use('/api/friends',    require('./routes/friends'));
 app.use('/api/confidants', require('./routes/confidants'));
+app.use('/api/teams',      require('./routes/teams'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ ok: true }));

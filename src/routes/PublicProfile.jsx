@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import PostCard from '../components/PostCard.jsx';
-import { apiGetPublicUser, apiGetPublicUserPosts } from '../lib/api.js';
+import { apiGetPublicUser, apiGetPublicUserPosts, apiSendFriendRequest, apiAcceptFriendRequest } from '../lib/api.js';
 
 function normalizePost(p) {
   return {
@@ -21,10 +21,11 @@ function normalizePost(p) {
 export default function PublicProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [profile,     setProfile]     = useState(null);
+  const [posts,       setPosts]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [friendBusy,  setFriendBusy]  = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,14 +88,26 @@ export default function PublicProfile() {
             {profile.bio && (
               <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-white/90">{profile.bio}</p>
             )}
-            {profile.relationship === 'match' && (
-              <Link
-                to="/messages"
-                className="mt-4 inline-flex rounded-pill border border-aura-cyan/60 px-4 py-2 text-xs font-semibold text-aura-cyan"
-              >
-                Abrir mensajes
-              </Link>
-            )}
+            <FriendButton
+              profile={profile}
+              busy={friendBusy}
+              onSend={async () => {
+                setFriendBusy(true);
+                try {
+                  await apiSendFriendRequest(userId);
+                  setProfile(p => ({ ...p, relationship: 'pending_sent' }));
+                } catch {}
+                setFriendBusy(false);
+              }}
+              onAccept={async () => {
+                setFriendBusy(true);
+                try {
+                  await apiAcceptFriendRequest(profile.friendship_request_id);
+                  setProfile(p => ({ ...p, relationship: 'friend' }));
+                } catch {}
+                setFriendBusy(false);
+              }}
+            />
           </section>
 
           <section className="mt-5">
@@ -128,8 +141,57 @@ function ProfileAvatar({ profile }) {
   );
 }
 
+function FriendButton({ profile, busy, onSend, onAccept }) {
+  const { relationship } = profile;
+  if (relationship === 'self') return null;
+  if (relationship === 'match') {
+    return (
+      <Link to="/messages" className="mt-4 inline-flex rounded-pill border border-aura-cyan/60 px-4 py-2 text-xs font-semibold text-aura-cyan">
+        Abrir mensajes
+      </Link>
+    );
+  }
+  if (relationship === 'friend') {
+    return (
+      <span className="mt-4 inline-flex rounded-pill border border-aura-cyan/30 px-4 py-2 text-xs text-aura-cyan/70">
+        Amigos ✓
+      </span>
+    );
+  }
+  if (relationship === 'pending_sent') {
+    return (
+      <span className="mt-4 inline-flex rounded-pill border border-white/20 px-4 py-2 text-xs text-white/40">
+        Solicitud enviada
+      </span>
+    );
+  }
+  if (relationship === 'pending_received') {
+    return (
+      <button
+        onClick={onAccept}
+        disabled={busy}
+        className="mt-4 rounded-pill bg-aura-cyan px-4 py-2 text-xs font-semibold text-aura-bg disabled:opacity-50"
+      >
+        {busy ? '…' : 'Aceptar solicitud'}
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={onSend}
+      disabled={busy}
+      className="mt-4 rounded-pill border border-aura-cyan/60 px-4 py-2 text-xs font-semibold text-aura-cyan hover:bg-aura-cyan/10 transition disabled:opacity-50"
+    >
+      {busy ? '…' : '+ Agregar amigo'}
+    </button>
+  );
+}
+
 function relationshipLabel(relationship) {
   if (relationship === 'self') return 'Tu perfil';
   if (relationship === 'match') return 'En tu círculo';
-  return 'Explorar';
+  if (relationship === 'friend') return 'Amigo';
+  if (relationship === 'pending_sent') return 'Solicitud enviada';
+  if (relationship === 'pending_received') return 'Quiere ser tu amigo';
+  return '';
 }

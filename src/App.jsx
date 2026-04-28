@@ -19,7 +19,7 @@ import CitaDobleChat from './routes/CitaDobleChat.jsx';
 import CitaDobleVideo from './routes/CitaDobleVideo.jsx';
 import CitaDobleResultado from './routes/CitaDobleResultado.jsx';
 import Onboarding from './routes/Onboarding.jsx';
-import MiNido from './routes/MiNido.jsx';
+import MiPerfil from './routes/MiPerfil.jsx';
 import EditarNido from './routes/EditarNido.jsx';
 import EspejoChat from './routes/EspejoChat.jsx';
 import Monedero from './routes/Monedero.jsx';
@@ -28,6 +28,11 @@ import Notificaciones from './routes/Notificaciones.jsx';
 import Legal from './routes/Legal.jsx';
 import Tareas from './routes/Tareas.jsx';
 import Flash from './routes/Flash.jsx';
+import Amigos from './routes/Amigos.jsx';
+import SolicitudesAmistad from './routes/SolicitudesAmistad.jsx';
+import Guardadas from './routes/Guardadas.jsx';
+import Confidentes from './routes/Confidentes.jsx';
+import Team2pa2 from './routes/Team2pa2.jsx';
 import { useAuthStore } from './lib/store.js';
 import { apiMe } from './lib/api.js';
 
@@ -123,11 +128,18 @@ export default function App() {
         <Route path="/cita-doble/sala/:sessionId"          element={<CitaDobleChat />} />
         <Route path="/cita-doble/llamada/:sessionId"       element={<CitaDobleVideo />} />
         <Route path="/cita-doble/resultado/:sessionId"     element={<CitaDobleResultado />} />
-        {/* Nido */}
-        <Route path="/nido"         element={<MiNido />} />
-        <Route path="/nido/editar"  element={<EditarNido />} />
-        <Route path="/mi-nido"        element={<MiNido />} />
+        {/* Perfil */}
+        <Route path="/mi-perfil"     element={<MiPerfil />} />
+        <Route path="/nido"          element={<MiPerfil />} />
+        <Route path="/nido/editar"   element={<EditarNido />} />
+        <Route path="/mi-nido"       element={<MiPerfil />} />
         <Route path="/mi-nido/editar" element={<EditarNido />} />
+        <Route path="/amigos"        element={<Amigos />} />
+        <Route path="/solicitudes"   element={<SolicitudesAmistad />} />
+        <Route path="/guardadas"     element={<Guardadas />} />
+        <Route path="/confidentes"   element={<Confidentes />} />
+        {/* 2pa2 */}
+        <Route path="/2pa2"          element={<Team2pa2 />} />
         {/* Monedero */}
         <Route path="/monedero"        element={<Monedero />} />
         <Route path="/wallet"          element={<Monedero />} />

@@ -24,7 +24,7 @@ export default function BottomTabBar() {
       className="md:hidden fixed bottom-0 inset-x-0 z-30 mx-auto max-w-[480px] border-t border-white/5 bg-aura-surface/90 backdrop-blur-md"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <ul className="grid grid-cols-6">
+      <ul className="grid grid-cols-7">
         {items.map(({ to, label, Icon }) => (
           <li key={to}>
             <NavLink

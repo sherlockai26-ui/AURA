@@ -66,6 +66,18 @@ export function CitaDobleIcon({ active, size = 22 }) {
   );
 }
 
+export function Team2pa2Icon({ active, size = 22 }) {
+  const c = color(active);
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7"  cy="7.5" r="2.5" stroke={c} strokeWidth="1.6" />
+      <circle cx="17" cy="7.5" r="2.5" stroke={c} strokeWidth="1.6" />
+      <path d="M3 18c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke={c} strokeWidth="1.6" />
+      <path d="M13 18c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke={c} strokeWidth="1.6" />
+    </svg>
+  );
+}
+
 export function FlashIcon({ active, size = 22 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color(active)} strokeWidth="1.8">
@@ -89,14 +101,15 @@ export function MatchIcon({ active, size = 22 }) {
   );
 }
 
-// Items de navegación base — Cita Doble ocupa el centro (ambos modos).
+// Items de navegación base.
 export const navItems = [
-  { to: '/feed',        label: 'Inicio',      Icon: HomeIcon },
-  { to: '/destello',    label: 'Destello',    Icon: DestelloIcon },
-  { to: '/cita-doble',  label: 'Cita Doble',  Icon: CitaDobleIcon },
-  { to: '/flash',       label: 'Flash',       Icon: FlashIcon },
-  { to: '/messages',    label: 'Mensajes',    Icon: ChatIcon },
-  { to: '/mi-perfil',   label: 'Perfil',      Icon: ProfileIcon },
+  { to: '/feed',       label: 'Inicio',     Icon: HomeIcon },
+  { to: '/destello',   label: 'Destello',   Icon: DestelloIcon },
+  { to: '/cita-doble', label: 'Cita Doble', Icon: CitaDobleIcon },
+  { to: '/2pa2',       label: '2pa2',       Icon: Team2pa2Icon },
+  { to: '/flash',      label: 'Flash',      Icon: FlashIcon },
+  { to: '/messages',   label: 'Mensajes',   Icon: ChatIcon },
+  { to: '/mi-perfil',  label: 'Perfil',     Icon: ProfileIcon },
 ];
 
 // Item de Zona de Match para usuarios Single (reemplaza Destello).

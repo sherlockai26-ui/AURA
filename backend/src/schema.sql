@@ -293,3 +293,34 @@ INSERT INTO reward_tasks (key, title, description, reward, auto_check) VALUES
   ('invite_friend',    'Invita a un amigo',      'Comparte tu código de referido con alguien',200, false),
   ('share_aura',       'Comparte AURA',          'Comparte AURA en redes sociales',           100, false)
 ON CONFLICT DO NOTHING;
+
+-- ── Teams 2pa2 ────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS teams_2pa2 (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    creator_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    teammate_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    connected_team_id UUID REFERENCES teams_2pa2(id) ON DELETE SET NULL,
+    conversation_id   UUID REFERENCES conversations(id) ON DELETE SET NULL,
+    status            VARCHAR(10) DEFAULT 'open' CHECK (status IN ('open', 'matched', 'closed')),
+    created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_teams_2pa2_creator  ON teams_2pa2(creator_id, status);
+CREATE INDEX IF NOT EXISTS idx_teams_2pa2_teammate ON teams_2pa2(teammate_id, status);
+
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams_2pa2(id) ON DELETE SET NULL;
+
+-- Extend notifications type for team_invite
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'notifications_type_check'
+      AND conrelid = 'notifications'::regclass
+      AND pg_catalog.pg_get_constraintdef(oid) NOT LIKE '%team_invite%'
+  ) THEN
+    ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+    ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+      CHECK (type IN ('match', 'message', 'video_like', 'video_comment', 'friend_request', 'team_invite'));
+  END IF;
+END $$;

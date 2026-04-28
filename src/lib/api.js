@@ -349,3 +349,25 @@ export async function apiRemoveConfidant(userId) {
 export async function apiHealth() {
   return request('/api/health');
 }
+
+// ── Teams 2pa2 ────────────────────────────────────────────────────────
+
+export async function getMyTeams() {
+  return request('/api/teams');
+}
+
+export async function createTeam2pa2(friendId) {
+  return request('/api/teams/create', { method: 'POST', body: JSON.stringify({ friendId }) });
+}
+
+export async function searchFemaleTeams() {
+  return request('/api/teams/search', { method: 'POST' });
+}
+
+export async function connectTeams(teamId, femaleTeamId) {
+  return request(`/api/teams/${teamId}/connect`, { method: 'POST', body: JSON.stringify({ femaleTeamId }) });
+}
+
+export async function confirmPairs(teamId, pairs) {
+  return request(`/api/teams/${teamId}/confirm`, { method: 'POST', body: JSON.stringify({ pairs }) });
+}

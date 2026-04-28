@@ -120,11 +120,18 @@ function TabBtn({ active, children, onClick }) {
   );
 }
 
+const PRIVACY_OPTS = [
+  { value: 'global',     label: 'Global' },
+  { value: 'circle',     label: 'Círculo' },
+  { value: 'confidants', label: 'Confidentes' },
+];
+
 function StoryComposer({ onClose, onCreated }) {
-  const [text, setText]       = useState('');
-  const [file, setFile]       = useState(null);
+  const [text,    setText]    = useState('');
+  const [file,    setFile]    = useState(null);
+  const [privacy, setPrivacy] = useState('global');
   const [sending, setSending] = useState(false);
-  const [error, setError]     = useState('');
+  const [error,   setError]   = useState('');
 
   async function submit(e) {
     e.preventDefault();
@@ -137,7 +144,7 @@ function StoryComposer({ onClose, onCreated }) {
         const uploaded = await apiUploadImage(file);
         imageUrl = uploaded.url;
       }
-      const story = await apiCreateStory({ content: text.trim(), image_url: imageUrl });
+      const story = await apiCreateStory({ content: text.trim(), image_url: imageUrl, privacy });
       onCreated(story);
     } catch (err) {
       setError(err.message || 'No se pudo crear la historia.');
@@ -158,6 +165,18 @@ function StoryComposer({ onClose, onCreated }) {
           placeholder="Texto de tu historia"
           className="h-24 w-full resize-none rounded-card border border-transparent bg-aura-bg px-4 py-3 text-sm text-white outline-none placeholder-aura-text-2 focus:border-aura-purple"
         />
+        <div className="mt-3 flex gap-2">
+          {PRIVACY_OPTS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPrivacy(opt.value)}
+              className={`flex-1 rounded-full py-1.5 text-xs font-semibold border transition ${privacy === opt.value ? 'border-aura-cyan text-aura-cyan bg-aura-cyan/10' : 'border-white/15 text-white/50'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <label className="mt-3 flex cursor-pointer items-center justify-between rounded-card border border-white/10 bg-aura-bg px-4 py-3 text-sm text-aura-text-2">
           <span className="truncate">{file ? file.name : 'Subir imagen'}</span>
           <span className="text-aura-cyan">Elegir</span>
