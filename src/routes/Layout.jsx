@@ -3,6 +3,8 @@ import BottomTabBar from '../components/BottomTabBar.jsx';
 import SideNav from '../components/SideNav.jsx';
 import RightPanel from '../components/RightPanel.jsx';
 import PwaBar from '../components/PwaBar.jsx';
+import Toast from '../components/Toast.jsx';
+import { useRealtimeNotifications } from '../hooks/useRealtimeNotifications.js';
 
 /*
  * Layout responsive:
@@ -11,6 +13,7 @@ import PwaBar from '../components/PwaBar.jsx';
  *  - Desktop amplio (≥lg): añade RightPanel con monedero y accesos rápidos.
  */
 export default function Layout() {
+  useRealtimeNotifications();
   return (
     <div className="relative min-h-[100dvh] bg-aura-bg text-white">
       <SideNav />
@@ -24,6 +27,7 @@ export default function Layout() {
 
       <BottomTabBar />
       <PwaBar />
+      <Toast />
     </div>
   );
 }

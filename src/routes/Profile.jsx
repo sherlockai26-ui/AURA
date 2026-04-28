@@ -152,7 +152,7 @@ export default function Profile() {
   return (
     <div className="pb-6">
       <header className="sticky top-0 z-20 flex items-center justify-between bg-aura-bg/95 px-4 py-3 backdrop-blur-md border-b border-white/5">
-        <span className="text-lg font-bold tracking-[2px]">Mi Nido</span>
+        <span className="text-lg font-bold tracking-[2px]">Perfil</span>
         <span className="text-xs text-aura-cyan font-semibold">{isDuo ? 'DUO' : 'SINGLE'}</span>
       </header>
 

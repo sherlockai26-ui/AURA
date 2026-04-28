@@ -148,11 +148,23 @@ export async function apiGetStories(scope = 'all') {
   return request(path);
 }
 
-export async function apiCreateStory({ content, image_url, visibility = 'public' }) {
+export async function apiCreateStory({ content, image_url, visibility = 'public', privacy = 'global' }) {
   return request('/api/stories', {
     method: 'POST',
-    body: JSON.stringify({ content, image_url, visibility }),
+    body: JSON.stringify({ content, image_url, visibility, privacy }),
   });
+}
+
+export async function apiSaveStory(storyId) {
+  return request(`/api/stories/${storyId}/save`, { method: 'POST' });
+}
+
+export async function apiUnsaveStory(storyId) {
+  return request(`/api/stories/${storyId}/save`, { method: 'DELETE' });
+}
+
+export async function apiGetSavedStories(page = 1) {
+  return request(`/api/stories/saved?page=${page}`);
 }
 
 // ── Users ─────────────────────────────────────────────────────────────
@@ -275,6 +287,61 @@ export async function deleteVideo(videoId) {
 
 export async function deleteVideoComment(commentId) {
   return request(`/api/videos/comments/${commentId}`, { method: 'DELETE' });
+}
+
+export async function updateVideoPrivacy(videoId, privacy) {
+  return request(`/api/videos/${videoId}/privacy`, {
+    method: 'PUT',
+    body: JSON.stringify({ privacy }),
+  });
+}
+
+export async function fetchVideoLikes(videoId, page = 1) {
+  return request(`/api/videos/${videoId}/likes?page=${page}`);
+}
+
+export async function likeVideoComment(commentId) {
+  return request(`/api/videos/comments/${commentId}/like`, { method: 'POST' });
+}
+
+// ── Friends ───────────────────────────────────────────────────────────
+
+export async function apiFetchFriends() {
+  return request('/api/friends');
+}
+
+export async function apiFetchFriendRequests() {
+  return request('/api/friends/requests');
+}
+
+export async function apiSendFriendRequest(toUserId) {
+  return request('/api/friends/request', { method: 'POST', body: JSON.stringify({ toUserId }) });
+}
+
+export async function apiAcceptFriendRequest(requestId) {
+  return request('/api/friends/accept', { method: 'POST', body: JSON.stringify({ requestId }) });
+}
+
+export async function apiDeclineFriendRequest(requestId) {
+  return request('/api/friends/decline', { method: 'POST', body: JSON.stringify({ requestId }) });
+}
+
+export async function apiRemoveFriend(userId) {
+  return request(`/api/friends/${userId}`, { method: 'DELETE' });
+}
+
+// ── Confidants ────────────────────────────────────────────────────────
+
+export async function apiFetchConfidants() {
+  return request('/api/confidants');
+}
+
+export async function apiAddConfidant(confidantUserId) {
+  return request('/api/confidants', { method: 'POST', body: JSON.stringify({ confidantUserId }) });
+}
+
+export async function apiRemoveConfidant(userId) {
+  return request(`/api/confidants/${userId}`, { method: 'DELETE' });
 }
 
 // ── Health ────────────────────────────────────────────────────────────

@@ -129,20 +129,56 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications (user_id, read, created_at DESC);
 
--- Extend notifications type to include video events (idempotent)
+-- Extend notifications type (idempotent — always includes all known types)
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'notifications_type_check'
       AND conrelid = 'notifications'::regclass
-      AND pg_catalog.pg_get_constraintdef(oid) NOT LIKE '%video_like%'
+      AND pg_catalog.pg_get_constraintdef(oid) NOT LIKE '%friend_request%'
   ) THEN
-    ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+    ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
     ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
-      CHECK (type IN ('match', 'message', 'video_like', 'video_comment'));
+      CHECK (type IN ('match', 'message', 'video_like', 'video_comment', 'friend_request'));
   END IF;
 END $$;
+
+-- ── Friends & Confidants ────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS friendships (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    requester_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    addressee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status       VARCHAR(10) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(requester_id, addressee_id)
+);
+CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id, status);
+CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships(addressee_id, status);
+
+CREATE TABLE IF NOT EXISTS confidants (
+    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    confidant_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at        TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, confidant_user_id)
+);
+
+-- ── Saved stories ────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS saved_stories (
+    id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id  UUID NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    saved_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, story_id)
+);
+
+-- ── Story privacy ────────────────────────────────────────────────────────
+
+ALTER TABLE stories ADD COLUMN IF NOT EXISTS privacy VARCHAR(20) DEFAULT 'global'
+  CHECK (privacy IN ('global', 'circle', 'confidants'));
 
 CREATE TABLE IF NOT EXISTS sparks_wallets (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -230,6 +266,22 @@ CREATE TABLE IF NOT EXISTS video_comments (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_video_comments_video_id ON video_comments(video_id);
+
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS privacy VARCHAR(10) DEFAULT 'public'
+  CHECK (privacy IN ('public', 'exclude', 'private'));
+
+CREATE TABLE IF NOT EXISTS video_exclusions (
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    user_id  UUID NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+    PRIMARY KEY (video_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS video_comment_likes (
+    user_id    UUID NOT NULL REFERENCES users(id)          ON DELETE CASCADE,
+    comment_id UUID NOT NULL REFERENCES video_comments(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, comment_id)
+);
 
 INSERT INTO reward_tasks (key, title, description, reward, auto_check) VALUES
   ('complete_profile', 'Completa tu perfil',    'Agrega nombre y bio a tu nido',             100, true),

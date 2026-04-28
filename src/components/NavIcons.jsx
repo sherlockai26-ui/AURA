@@ -96,7 +96,7 @@ export const navItems = [
   { to: '/cita-doble',  label: 'Cita Doble',  Icon: CitaDobleIcon },
   { to: '/flash',       label: 'Flash',       Icon: FlashIcon },
   { to: '/messages',    label: 'Mensajes',    Icon: ChatIcon },
-  { to: '/nido',        label: 'Mi Nido',     Icon: ProfileIcon },
+  { to: '/mi-perfil',   label: 'Perfil',      Icon: ProfileIcon },
 ];
 
 // Item de Zona de Match para usuarios Single (reemplaza Destello).

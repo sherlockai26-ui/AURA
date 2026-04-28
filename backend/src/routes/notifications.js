@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
        LEFT JOIN users actor ON actor.id = n.actor_user_id AND actor.deleted_at IS NULL
        LEFT JOIN profiles p ON p.user_id = actor.id
        LEFT JOIN messages msg ON n.type = 'message' AND msg.id = n.reference_id
-       WHERE n.user_id = $1
+       WHERE n.user_id = $1${req.query.unread === 'true' ? ' AND n.read = FALSE' : ''}
        ORDER BY n.created_at DESC
        LIMIT 50`,
       [req.user.id]

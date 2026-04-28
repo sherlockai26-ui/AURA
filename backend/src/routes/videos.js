@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = ['video/mp4', 'video/mpeg', 'video/quicktime'];
     cb(null, allowed.includes(file.mimetype));
@@ -33,9 +33,9 @@ router.post('/upload', requireAuth, upload.fields([
   const videoFile = req.files?.video?.[0];
   if (!videoFile) return res.status(400).json({ error: 'Video requerido.' });
 
-  const thumbFile  = req.files?.thumbnail?.[0];
-  const title      = req.body.title?.trim() || null;
-  const duration   = req.body.duration ? parseInt(req.body.duration, 10) : null;
+  const thumbFile = req.files?.thumbnail?.[0];
+  const title     = req.body.title?.trim() || null;
+  const duration  = req.body.duration ? parseInt(req.body.duration, 10) : null;
 
   if (duration !== null && duration > 120) {
     return res.status(400).json({ error: 'El video no puede superar 120 segundos.' });
@@ -48,7 +48,7 @@ router.post('/upload', requireAuth, upload.fields([
     const { rows } = await pool.query(
       `INSERT INTO videos (user_id, title, video_url, thumbnail_url, duration)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, video_url, thumbnail_url, title, duration, created_at`,
+       RETURNING id, video_url, thumbnail_url, title, duration, privacy, created_at`,
       [req.user.id, title, videoUrl, thumbUrl, duration]
     );
     res.status(201).json({ video: rows[0] });
@@ -60,14 +60,14 @@ router.post('/upload', requireAuth, upload.fields([
 
 // GET /api/videos?page=1&limit=10
 router.get('/', requireAuth, async (req, res) => {
-  const page  = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = Math.min(parseInt(req.query.limit) || 10, 30);
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const limit  = Math.min(parseInt(req.query.limit) || 10, 30);
   const offset = (page - 1) * limit;
 
   try {
     const { rows } = await pool.query(
       `SELECT
-         v.id, v.title, v.video_url, v.thumbnail_url, v.duration, v.created_at,
+         v.id, v.title, v.video_url, v.thumbnail_url, v.duration, v.created_at, v.privacy,
          u.id   AS user_id,
          u.handle,
          COALESCE(p.display_name, u.handle) AS display_name,
@@ -80,6 +80,7 @@ router.get('/', requireAuth, async (req, res) => {
        LEFT JOIN profiles p        ON p.user_id = v.user_id
        LEFT JOIN video_likes vl    ON vl.video_id = v.id
        LEFT JOIN video_comments vc ON vc.video_id = v.id
+       WHERE (v.user_id = $1 OR v.privacy != 'private')
        GROUP BY v.id, u.id, u.handle, p.display_name, p.avatar_url
        ORDER BY v.created_at DESC
        LIMIT $2 OFFSET $3`,
@@ -88,6 +89,25 @@ router.get('/', requireAuth, async (req, res) => {
     res.json({ videos: rows, page, limit });
   } catch (err) {
     console.error('video feed error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
+// PUT /api/videos/:id/privacy
+router.put('/:id/privacy', requireAuth, async (req, res) => {
+  const { privacy } = req.body;
+  if (!['public', 'exclude', 'private'].includes(privacy)) {
+    return res.status(400).json({ error: 'Privacidad inválida.' });
+  }
+  try {
+    const { rows } = await pool.query(
+      'UPDATE videos SET privacy=$1, updated_at=NOW() WHERE id=$2 AND user_id=$3 RETURNING id, privacy',
+      [privacy, req.params.id, req.user.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Video no encontrado o sin permiso.' });
+    res.json({ success: true, privacy: rows[0].privacy });
+  } catch (err) {
+    console.error('update privacy error:', err);
     res.status(500).json({ error: 'Error interno.' });
   }
 });
@@ -108,13 +128,11 @@ router.post('/:id/like', requireAuth, async (req, res) => {
     } else {
       await pool.query('INSERT INTO video_likes (user_id, video_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, videoId]);
 
-      // Notify video owner (skip self-like)
       const { rows: vRows } = await pool.query('SELECT user_id FROM videos WHERE id=$1', [videoId]);
       if (vRows.length > 0 && vRows[0].user_id !== userId) {
-        await pool.query(
+        pool.query(
           `INSERT INTO notifications (user_id, actor_user_id, type, reference_id)
-           VALUES ($1, $2, 'video_like', $3)
-           ON CONFLICT DO NOTHING`,
+           VALUES ($1, $2, 'video_like', $3) ON CONFLICT DO NOTHING`,
           [vRows[0].user_id, userId, videoId]
         ).catch(() => {});
       }
@@ -127,6 +145,30 @@ router.post('/:id/like', requireAuth, async (req, res) => {
     res.json({ liked: existing.rows.length === 0, likes_count: rows[0].likes_count });
   } catch (err) {
     console.error('video like error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
+// GET /api/videos/:id/likes
+router.get('/:id/likes', requireAuth, async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const limit  = Math.min(parseInt(req.query.limit) || 20, 50);
+  const offset = (page - 1) * limit;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, u.handle, COALESCE(p.display_name, u.handle) AS display_name, p.avatar_url
+       FROM video_likes vl
+       JOIN users u    ON u.id = vl.user_id
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE vl.video_id = $1
+       ORDER BY vl.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [req.params.id, limit, offset]
+    );
+    res.json({ users: rows });
+  } catch (err) {
+    console.error('video likes list error:', err);
     res.status(500).json({ error: 'Error interno.' });
   }
 });
@@ -145,17 +187,16 @@ router.post('/:id/comments', requireAuth, async (req, res) => {
       [videoId, req.user.id, content]
     );
 
-    // Notify video owner (skip self-comment)
     const { rows: vRows } = await pool.query('SELECT user_id FROM videos WHERE id=$1', [videoId]);
     if (vRows.length > 0 && vRows[0].user_id !== req.user.id) {
-      await pool.query(
+      pool.query(
         `INSERT INTO notifications (user_id, actor_user_id, type, reference_id)
          VALUES ($1, $2, 'video_comment', $3)`,
         [vRows[0].user_id, req.user.id, videoId]
       ).catch(() => {});
     }
 
-    res.status(201).json({ comment: rows[0] });
+    res.status(201).json({ comment: { ...rows[0], likes_count: 0, has_liked: false } });
   } catch (err) {
     console.error('video comment error:', err);
     res.status(500).json({ error: 'Error interno.' });
@@ -164,8 +205,8 @@ router.post('/:id/comments', requireAuth, async (req, res) => {
 
 // GET /api/videos/:id/comments
 router.get('/:id/comments', requireAuth, async (req, res) => {
-  const page  = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const limit  = Math.min(parseInt(req.query.limit) || 20, 50);
   const offset = (page - 1) * limit;
 
   try {
@@ -174,14 +215,18 @@ router.get('/:id/comments', requireAuth, async (req, res) => {
          vc.id, vc.content, vc.created_at,
          u.id AS user_id, u.handle,
          COALESCE(p.display_name, u.handle) AS display_name,
-         p.avatar_url
+         p.avatar_url,
+         COUNT(vcl.user_id)::int        AS likes_count,
+         BOOL_OR(vcl.user_id = $2)      AS has_liked
        FROM video_comments vc
        JOIN users u    ON u.id = vc.user_id
-       LEFT JOIN profiles p ON p.user_id = u.id
+       LEFT JOIN profiles p             ON p.user_id = u.id
+       LEFT JOIN video_comment_likes vcl ON vcl.comment_id = vc.id
        WHERE vc.video_id = $1
+       GROUP BY vc.id, u.id, u.handle, p.display_name, p.avatar_url
        ORDER BY vc.created_at ASC
-       LIMIT $2 OFFSET $3`,
-      [req.params.id, limit, offset]
+       LIMIT $3 OFFSET $4`,
+      [req.params.id, req.user.id, limit, offset]
     );
     res.json({ comments: rows, page, limit });
   } catch (err) {
@@ -190,7 +235,38 @@ router.get('/:id/comments', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/videos/comments/:commentId  (debe ir ANTES de /:id para evitar colisión)
+// POST /api/videos/comments/:commentId/like  (antes de DELETE /comments/:commentId)
+router.post('/comments/:commentId/like', requireAuth, async (req, res) => {
+  const { commentId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const existing = await pool.query(
+      'SELECT 1 FROM video_comment_likes WHERE user_id=$1 AND comment_id=$2',
+      [userId, commentId]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query('DELETE FROM video_comment_likes WHERE user_id=$1 AND comment_id=$2', [userId, commentId]);
+    } else {
+      await pool.query(
+        'INSERT INTO video_comment_likes (user_id, comment_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [userId, commentId]
+      );
+    }
+
+    const { rows } = await pool.query(
+      'SELECT COUNT(*)::int AS likes_count FROM video_comment_likes WHERE comment_id=$1',
+      [commentId]
+    );
+    res.json({ liked: existing.rows.length === 0, likes_count: rows[0].likes_count });
+  } catch (err) {
+    console.error('comment like error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
+// DELETE /api/videos/comments/:commentId
 router.delete('/comments/:commentId', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -215,7 +291,6 @@ router.delete('/:id', requireAuth, async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Video no encontrado.' });
     if (rows[0].user_id !== req.user.id) return res.status(403).json({ error: 'Sin permiso.' });
 
-    // Remove physical file
     const filePath = path.join(process.env.UPLOADS_DIR || '/uploads', rows[0].video_url.replace('/uploads/', ''));
     fs.unlink(filePath, () => {});
 

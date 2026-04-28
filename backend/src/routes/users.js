@@ -11,13 +11,25 @@ router.get('/:id', async (req, res) => {
               p.display_name, p.bio, p.avatar_url, p.mode,
               CASE
                 WHEN u.id = $1 THEN 'self'
-                WHEN EXISTS (
-                  SELECT 1 FROM matches m
-                  WHERE (m.user1_id = $1 AND m.user2_id = u.id)
-                     OR (m.user2_id = $1 AND m.user1_id = u.id)
+                WHEN EXISTS (SELECT 1 FROM matches m
+                  WHERE (m.user1_id=$1 AND m.user2_id=u.id) OR (m.user2_id=$1 AND m.user1_id=u.id)
                 ) THEN 'match'
+                WHEN EXISTS (SELECT 1 FROM friendships f
+                  WHERE f.status='accepted'
+                    AND ((f.requester_id=$1 AND f.addressee_id=u.id) OR (f.addressee_id=$1 AND f.requester_id=u.id))
+                ) THEN 'friend'
+                WHEN EXISTS (SELECT 1 FROM friendships f
+                  WHERE f.status='pending' AND f.requester_id=$1 AND f.addressee_id=u.id
+                ) THEN 'pending_sent'
+                WHEN EXISTS (SELECT 1 FROM friendships f
+                  WHERE f.status='pending' AND f.requester_id=u.id AND f.addressee_id=$1
+                ) THEN 'pending_received'
                 ELSE 'none'
-              END AS relationship
+              END AS relationship,
+              (SELECT f.id FROM friendships f
+               WHERE f.status='pending'
+                 AND ((f.requester_id=$1 AND f.addressee_id=u.id) OR (f.requester_id=u.id AND f.addressee_id=$1))
+               LIMIT 1) AS friendship_request_id
        FROM users u
        LEFT JOIN profiles p ON p.user_id = u.id
        WHERE u.id = $2

@@ -50,7 +50,9 @@ app.use('/api/sparks',  require('./routes/sparks'));
 app.use('/api/match',  require('./routes/match'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/tasks',  require('./routes/tasks'));
-app.use('/api/videos', require('./routes/videos'));
+app.use('/api/videos',     require('./routes/videos'));
+app.use('/api/friends',    require('./routes/friends'));
+app.use('/api/confidants', require('./routes/confidants'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ ok: true }));
