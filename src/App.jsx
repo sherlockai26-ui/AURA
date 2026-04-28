@@ -27,6 +27,7 @@ import CentroSeguridad from './routes/CentroSeguridad.jsx';
 import Notificaciones from './routes/Notificaciones.jsx';
 import Legal from './routes/Legal.jsx';
 import Tareas from './routes/Tareas.jsx';
+import Flash from './routes/Flash.jsx';
 import { useAuthStore } from './lib/store.js';
 import { apiMe } from './lib/api.js';
 
@@ -105,6 +106,7 @@ export default function App() {
       >
         <Route path="/"              element={<RootRedirect />} />
         <Route path="/feed"          element={<Feed />} />
+        <Route path="/flash"         element={<Flash />} />
         <Route path="/destello"      element={<Placeholder title="Destello" subtitle="Videochat en pareja a 4 bandas (próximamente)" icon="⚡" />} />
         <Route path="/notifications" element={<Notificaciones />} />
         <Route path="/messages"      element={<EspejoChat />} />

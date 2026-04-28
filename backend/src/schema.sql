@@ -185,6 +185,37 @@ CREATE TABLE IF NOT EXISTS user_task_claims (
   PRIMARY KEY (user_id, task_key)
 );
 
+-- ── Flash videos ────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS videos (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title         VARCHAR(200),
+    video_url     TEXT NOT NULL,
+    thumbnail_url TEXT,
+    duration      INTEGER,
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_videos_user_id    ON videos(user_id);
+CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS video_likes (
+    user_id    UUID NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    video_id   UUID NOT NULL REFERENCES videos(id)  ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, video_id)
+);
+
+CREATE TABLE IF NOT EXISTS video_comments (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id   UUID NOT NULL REFERENCES videos(id)  ON DELETE CASCADE,
+    user_id    UUID NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    content    TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_video_comments_video_id ON video_comments(video_id);
+
 INSERT INTO reward_tasks (key, title, description, reward, auto_check) VALUES
   ('complete_profile', 'Completa tu perfil',    'Agrega nombre y bio a tu nido',             100, true),
   ('upload_avatar',    'Sube tu foto',           'Agrega una foto de perfil',                  50, true),

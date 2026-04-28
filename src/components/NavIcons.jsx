@@ -66,6 +66,15 @@ export function CitaDobleIcon({ active, size = 22 }) {
   );
 }
 
+export function FlashIcon({ active, size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color(active)} strokeWidth="1.8">
+      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" strokeLinejoin="round"
+        fill={active ? 'rgba(0,245,212,0.2)' : 'none'} />
+    </svg>
+  );
+}
+
 export function MatchIcon({ active, size = 22 }) {
   const c = color(active);
   return (
@@ -85,6 +94,7 @@ export const navItems = [
   { to: '/feed',        label: 'Inicio',      Icon: HomeIcon },
   { to: '/destello',    label: 'Destello',    Icon: DestelloIcon },
   { to: '/cita-doble',  label: 'Cita Doble',  Icon: CitaDobleIcon },
+  { to: '/flash',       label: 'Flash',       Icon: FlashIcon },
   { to: '/messages',    label: 'Mensajes',    Icon: ChatIcon },
   { to: '/nido',        label: 'Mi Nido',     Icon: ProfileIcon },
 ];

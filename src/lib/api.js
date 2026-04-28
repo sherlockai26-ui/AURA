@@ -244,6 +244,31 @@ export async function apiClaimTask(taskKey) {
   return request(`/api/tasks/${taskKey}/claim`, { method: 'POST' });
 }
 
+// ── Flash Videos ──────────────────────────────────────────────────────
+
+export async function fetchVideos(page = 1, limit = 10) {
+  return request(`/api/videos?page=${page}&limit=${limit}`);
+}
+
+export async function likeVideo(videoId) {
+  return request(`/api/videos/${videoId}/like`, { method: 'POST' });
+}
+
+export async function fetchVideoComments(videoId, page = 1) {
+  return request(`/api/videos/${videoId}/comments?page=${page}`);
+}
+
+export async function postVideoComment(videoId, content) {
+  return request(`/api/videos/${videoId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function uploadVideo(formData) {
+  return request('/api/videos/upload', { method: 'POST', body: formData });
+}
+
 // ── Health ────────────────────────────────────────────────────────────
 
 export async function apiHealth() {
