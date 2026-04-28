@@ -129,6 +129,21 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications (user_id, read, created_at DESC);
 
+-- Extend notifications type to include video events (idempotent)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'notifications_type_check'
+      AND conrelid = 'notifications'::regclass
+      AND pg_catalog.pg_get_constraintdef(oid) NOT LIKE '%video_like%'
+  ) THEN
+    ALTER TABLE notifications DROP CONSTRAINT notifications_type_check;
+    ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+      CHECK (type IN ('match', 'message', 'video_like', 'video_comment'));
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS sparks_wallets (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   balance INTEGER DEFAULT 50 NOT NULL CHECK (balance >= 0)

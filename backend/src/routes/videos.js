@@ -107,6 +107,17 @@ router.post('/:id/like', requireAuth, async (req, res) => {
       await pool.query('DELETE FROM video_likes WHERE user_id=$1 AND video_id=$2', [userId, videoId]);
     } else {
       await pool.query('INSERT INTO video_likes (user_id, video_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, videoId]);
+
+      // Notify video owner (skip self-like)
+      const { rows: vRows } = await pool.query('SELECT user_id FROM videos WHERE id=$1', [videoId]);
+      if (vRows.length > 0 && vRows[0].user_id !== userId) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, actor_user_id, type, reference_id)
+           VALUES ($1, $2, 'video_like', $3)
+           ON CONFLICT DO NOTHING`,
+          [vRows[0].user_id, userId, videoId]
+        ).catch(() => {});
+      }
     }
 
     const { rows } = await pool.query(
@@ -133,6 +144,17 @@ router.post('/:id/comments', requireAuth, async (req, res) => {
        RETURNING id, user_id, content, created_at`,
       [videoId, req.user.id, content]
     );
+
+    // Notify video owner (skip self-comment)
+    const { rows: vRows } = await pool.query('SELECT user_id FROM videos WHERE id=$1', [videoId]);
+    if (vRows.length > 0 && vRows[0].user_id !== req.user.id) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, actor_user_id, type, reference_id)
+         VALUES ($1, $2, 'video_comment', $3)`,
+        [vRows[0].user_id, req.user.id, videoId]
+      ).catch(() => {});
+    }
+
     res.status(201).json({ comment: rows[0] });
   } catch (err) {
     console.error('video comment error:', err);

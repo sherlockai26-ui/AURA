@@ -7,11 +7,13 @@ import {
 } from '../lib/api.js';
 
 const TYPE_ICONS = {
-  match:   '❤️',
-  message: '💬',
-  group:   '🎲',
-  spark:   '⚡',
-  system:  '✨',
+  match:         '❤️',
+  message:       '💬',
+  group:         '🎲',
+  spark:         '⚡',
+  system:        '✨',
+  video_like:    '🤍',
+  video_comment: '💬',
 };
 
 export default function Notificaciones() {
@@ -128,15 +130,18 @@ export default function Notificaciones() {
 }
 
 function notificationText(n) {
-  const actor = n.actor_name || n.actor_handle || 'Alguien';
-  if (n.type === 'match') return `Nuevo match con @${n.actor_handle || actor}`;
-  if (n.type === 'message') return `${actor} te envió un mensaje`;
+  const actor = n.actor_handle ? `@${n.actor_handle}` : (n.actor_name || 'Alguien');
+  if (n.type === 'match')         return `Nuevo match con ${actor}`;
+  if (n.type === 'message')       return `${actor} te envió un mensaje`;
+  if (n.type === 'video_like')    return `A ${actor} le gustó tu video`;
+  if (n.type === 'video_comment') return `${actor} comentó en tu video`;
   return 'Nueva notificación';
 }
 
 function notificationPath(n) {
   if (n.type === 'message' && n.conversation_id) return `/messages?conv=${n.conversation_id}`;
   if (n.type === 'match') return '/zona-match';
+  if (n.type === 'video_like' || n.type === 'video_comment') return '/flash';
   return '';
 }
 

@@ -5,6 +5,7 @@ import { useAuthStore } from '../lib/store.js';
 export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
   const session         = useAuthStore((s) => s.session);
   const videoRef        = useRef(null);
+  const menuRef         = useRef(null);
   const [liked,         setLiked]         = useState(video.liked);
   const [likesCount,    setLikesCount]     = useState(video.likes_count);
   const [commentsCount, setCommentsCount]  = useState(video.comments_count);
@@ -13,9 +14,22 @@ export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
   const [commentText,   setCommentText]    = useState('');
   const [muted,         setMuted]          = useState(true);
   const [paused,        setPaused]         = useState(false);
+  const [showMenu,      setShowMenu]       = useState(false);
   const [confirmDelete, setConfirmDelete]  = useState(false);
+  const [showPrivacy,   setShowPrivacy]    = useState(false);
+  const [toast,         setToast]          = useState('');
 
   const isOwner = session?.id === video.user_id;
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!showMenu) return;
+    function handleOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+    }
+    document.addEventListener('pointerdown', handleOutside);
+    return () => document.removeEventListener('pointerdown', handleOutside);
+  }, [showMenu]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -85,6 +99,28 @@ export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
     } catch {}
   }
 
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  }
+
+  async function handleShare() {
+    const url = `${window.location.origin}/flash?video=${video.id}`;
+    const title = video.title || 'Video en AURA Flash';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch {}
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Enlace copiado');
+    } catch {
+      showToast('No se pudo copiar el enlace');
+    }
+  }
+
   const avatar = video.avatar_url
     ? video.avatar_url
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(video.display_name || video.handle)}&background=1a1b1f&color=00F5D4&size=64`;
@@ -117,20 +153,38 @@ export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
       {/* Bottom gradient */}
       <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
 
-      {/* Delete button — only for video owner */}
+      {/* 3-dot menu — only for owner */}
       {isOwner && (
-        <button
-          onClick={() => setConfirmDelete(true)}
-          className="absolute top-4 left-4 z-10 text-[#B0B0B0] p-1"
-          aria-label="Eliminar video"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14H6L5 6"/>
-            <path d="M10 11v6M14 11v6"/>
-            <path d="M9 6V4h6v2"/>
-          </svg>
-        </button>
+        <div ref={menuRef} className="absolute top-4 left-4 z-10">
+          <button
+            onClick={() => setShowMenu(m => !m)}
+            className="text-[#B0B0B0] p-1"
+            aria-label="Más opciones"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5"  r="1.5"/>
+              <circle cx="12" cy="12" r="1.5"/>
+              <circle cx="12" cy="19" r="1.5"/>
+            </svg>
+          </button>
+
+          {showMenu && (
+            <div className="absolute top-8 left-0 w-44 bg-[#1F2833] rounded-xl shadow-xl overflow-hidden border border-white/10 z-20">
+              <button
+                onClick={() => { setShowMenu(false); setShowPrivacy(true); }}
+                className="w-full text-left px-4 py-3 text-white text-sm hover:bg-white/10 transition"
+              >
+                Editar privacidad
+              </button>
+              <button
+                onClick={() => { setShowMenu(false); setConfirmDelete(true); }}
+                className="w-full text-left px-4 py-3 text-[#FF4D6D] text-sm hover:bg-white/10 transition"
+              >
+                Eliminar video
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Right side actions */}
@@ -149,6 +203,18 @@ export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
             <path d="M4 5h16v11H8l-4 4V5Z" strokeLinejoin="round"/>
           </svg>
           <span className="text-white text-xs font-semibold">{commentsCount}</span>
+        </button>
+
+        {/* Share */}
+        <button onClick={handleShare} className="flex flex-col items-center gap-1">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#B0B0B0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="2.5"/>
+            <circle cx="6"  cy="12" r="2.5"/>
+            <circle cx="18" cy="19" r="2.5"/>
+            <line x1="8.4"  y1="10.9" x2="15.6" y2="6.1"/>
+            <line x1="8.4"  y1="13.1" x2="15.6" y2="17.9"/>
+          </svg>
+          <span className="text-[#B0B0B0] text-xs">Compartir</span>
         </button>
 
         {/* Mute */}
@@ -177,6 +243,13 @@ export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
           {video.title && <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{video.title}</p>}
         </div>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 bg-black/80 text-white text-xs px-4 py-2 rounded-full pointer-events-none">
+          {toast}
+        </div>
+      )}
 
       {/* Comments panel */}
       {showComments && (
@@ -248,6 +321,22 @@ export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
                 Eliminar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy placeholder modal */}
+      {showPrivacy && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70">
+          <div className="bg-[#1F2833] rounded-2xl p-6 mx-6 space-y-4 w-full max-w-xs text-center">
+            <p className="text-white font-semibold text-sm">Editar privacidad</p>
+            <p className="text-white/50 text-xs">Próximamente: aquí podrás controlar quién ve tu video.</p>
+            <button
+              onClick={() => setShowPrivacy(false)}
+              className="w-full py-2.5 rounded-full border border-white/20 text-white/70 text-sm"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
