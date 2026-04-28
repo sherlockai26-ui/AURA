@@ -269,6 +269,14 @@ export async function uploadVideo(formData) {
   return request('/api/videos/upload', { method: 'POST', body: formData });
 }
 
+export async function deleteVideo(videoId) {
+  return request(`/api/videos/${videoId}`, { method: 'DELETE' });
+}
+
+export async function deleteVideoComment(commentId) {
+  return request(`/api/videos/comments/${commentId}`, { method: 'DELETE' });
+}
+
 // ── Health ────────────────────────────────────────────────────────────
 
 export async function apiHealth() {

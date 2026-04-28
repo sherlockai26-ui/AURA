@@ -168,4 +168,41 @@ router.get('/:id/comments', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/videos/comments/:commentId  (debe ir ANTES de /:id para evitar colisión)
+router.delete('/comments/:commentId', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM video_comments WHERE id=$1 AND user_id=$2 RETURNING id',
+      [req.params.commentId, req.user.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Comentario no encontrado o sin permiso.' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('delete comment error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
+// DELETE /api/videos/:id
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT video_url, user_id FROM videos WHERE id=$1',
+      [req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Video no encontrado.' });
+    if (rows[0].user_id !== req.user.id) return res.status(403).json({ error: 'Sin permiso.' });
+
+    // Remove physical file
+    const filePath = path.join(process.env.UPLOADS_DIR || '/uploads', rows[0].video_url.replace('/uploads/', ''));
+    fs.unlink(filePath, () => {});
+
+    await pool.query('DELETE FROM videos WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('delete video error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
 module.exports = router;

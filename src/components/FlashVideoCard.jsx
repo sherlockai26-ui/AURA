@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { likeVideo, fetchVideoComments, postVideoComment } from '../lib/api.js';
+import { likeVideo, fetchVideoComments, postVideoComment, deleteVideo, deleteVideoComment } from '../lib/api.js';
+import { useAuthStore } from '../lib/store.js';
 
-export default function FlashVideoCard({ video, active, onEnded }) {
-  const videoRef  = useRef(null);
+export default function FlashVideoCard({ video, active, onEnded, onDeleted }) {
+  const session         = useAuthStore((s) => s.session);
+  const videoRef        = useRef(null);
   const [liked,         setLiked]         = useState(video.liked);
   const [likesCount,    setLikesCount]     = useState(video.likes_count);
+  const [commentsCount, setCommentsCount]  = useState(video.comments_count);
   const [showComments,  setShowComments]   = useState(false);
   const [comments,      setComments]       = useState([]);
   const [commentText,   setCommentText]    = useState('');
   const [muted,         setMuted]          = useState(true);
   const [paused,        setPaused]         = useState(false);
+  const [confirmDelete, setConfirmDelete]  = useState(false);
+
+  const isOwner = session?.id === video.user_id;
 
   useEffect(() => {
     const el = videoRef.current;
@@ -58,7 +64,24 @@ export default function FlashVideoCard({ video, active, onEnded }) {
     try {
       const data = await postVideoComment(video.id, commentText.trim());
       setComments(prev => [...prev, data.comment]);
+      setCommentsCount(c => c + 1);
       setCommentText('');
+    } catch {}
+  }
+
+  async function handleDeleteComment(commentId) {
+    try {
+      await deleteVideoComment(commentId);
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      setCommentsCount(c => Math.max(0, c - 1));
+    } catch {}
+  }
+
+  async function handleDeleteVideo() {
+    try {
+      await deleteVideo(video.id);
+      setConfirmDelete(false);
+      onDeleted?.(video.id);
     } catch {}
   }
 
@@ -94,6 +117,22 @@ export default function FlashVideoCard({ video, active, onEnded }) {
       {/* Bottom gradient */}
       <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
 
+      {/* Delete button — only for video owner */}
+      {isOwner && (
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="absolute top-4 left-4 z-10 text-[#B0B0B0] p-1"
+          aria-label="Eliminar video"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14H6L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
+      )}
+
       {/* Right side actions */}
       <div className="absolute right-3 bottom-28 flex flex-col items-center gap-5">
         {/* Like */}
@@ -109,7 +148,7 @@ export default function FlashVideoCard({ video, active, onEnded }) {
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8">
             <path d="M4 5h16v11H8l-4 4V5Z" strokeLinejoin="round"/>
           </svg>
-          <span className="text-white text-xs font-semibold">{video.comments_count}</span>
+          <span className="text-white text-xs font-semibold">{commentsCount}</span>
         </button>
 
         {/* Mute */}
@@ -151,16 +190,29 @@ export default function FlashVideoCard({ video, active, onEnded }) {
               <p className="text-center text-white/40 text-sm py-6">Sin comentarios todavía.</p>
             )}
             {comments.map(c => (
-              <div key={c.id} className="flex gap-2">
+              <div key={c.id} className="flex gap-2 items-start">
                 <img
                   src={c.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.display_name || c.handle)}&background=1a1b1f&color=00F5D4&size=40`}
                   alt={c.handle}
                   className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5"
                 />
-                <div>
+                <div className="flex-1 min-w-0">
                   <span className="text-aura-cyan text-xs font-semibold">@{c.handle} </span>
                   <span className="text-white/90 text-sm">{c.content}</span>
                 </div>
+                {session?.id === c.user_id && (
+                  <button
+                    onClick={() => handleDeleteComment(c.id)}
+                    className="flex-shrink-0 text-[#B0B0B0] hover:text-red-400 p-0.5 mt-0.5"
+                    aria-label="Eliminar comentario"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14H6L5 6"/>
+                      <path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -173,6 +225,30 @@ export default function FlashVideoCard({ video, active, onEnded }) {
             />
             <button type="submit" disabled={!commentText.trim()} className="text-aura-cyan font-semibold text-sm disabled:opacity-40">Enviar</button>
           </form>
+        </div>
+      )}
+
+      {/* Confirm delete video modal */}
+      {confirmDelete && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70">
+          <div className="bg-[#1F2833] rounded-2xl p-6 mx-6 space-y-4 w-full max-w-xs">
+            <p className="text-white font-semibold text-sm text-center">¿Eliminar este video?</p>
+            <p className="text-white/50 text-xs text-center">Esta acción no se puede deshacer.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 py-2.5 rounded-full border border-white/20 text-white/70 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteVideo}
+                className="flex-1 py-2.5 rounded-full bg-[#FF4D6D] text-white font-semibold text-sm"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

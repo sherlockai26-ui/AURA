@@ -97,6 +97,7 @@ export default function Flash() {
               video={video}
               active={idx === activeIdx}
               onEnded={handleEnded}
+              onDeleted={id => setVideos(prev => prev.filter(v => v.id !== id))}
             />
           </div>
         ))}
