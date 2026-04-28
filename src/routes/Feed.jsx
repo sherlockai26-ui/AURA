@@ -4,7 +4,10 @@ import StatusBox from '../components/StatusBox.jsx';
 import QuickAccessRow from '../components/QuickAccessRow.jsx';
 import StoriesRow from '../components/StoriesRow.jsx';
 import PostCard from '../components/PostCard.jsx';
-import { apiGetPosts, apiCreatePost } from '../lib/api.js';
+import { apiGetPosts, apiCreatePost, apiUploadImage } from '../lib/api.js';
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function normalizePost(p) {
   return {
@@ -30,7 +33,13 @@ export default function Feed() {
   const [cursor,   setCursor]   = useState(null);
   const [hasMore,  setHasMore]  = useState(true);
   const [composer, setComposer] = useState(false);
+  const [composerImageUrl, setComposerImageUrl] = useState('');
   const sentinelRef = useRef(null);
+
+  function openComposer(imageUrl = '') {
+    setComposerImageUrl(imageUrl || '');
+    setComposer(true);
+  }
 
   async function loadPosts(cur) {
     setLoading(true);
@@ -70,7 +79,7 @@ export default function Feed() {
   return (
     <div>
       <TopHeader />
-      <StatusBox onOpenComposer={() => setComposer(true)} />
+      <StatusBox onOpenComposer={openComposer} />
       <QuickAccessRow />
       <StoriesRow />
 
@@ -109,7 +118,11 @@ export default function Feed() {
 
       {composer && (
         <PostComposer
-          onClose={() => setComposer(false)}
+          initialImageUrl={composerImageUrl}
+          onClose={() => {
+            setComposer(false);
+            setComposerImageUrl('');
+          }}
           onPosted={(newPost) => setPosts((prev) => [normalizePost(newPost), ...prev])}
         />
       )}
@@ -117,18 +130,25 @@ export default function Feed() {
   );
 }
 
-function PostComposer({ onClose, onPosted }) {
-  const [text,    setText]    = useState('');
-  const [sending, setSending] = useState(false);
-  const [error,   setError]   = useState('');
+function PostComposer({ initialImageUrl = '', onClose, onPosted }) {
+  const [text,     setText]     = useState('');
+  const [imageUrl, setImageUrl] = useState(initialImageUrl);
+  const [file,     setFile]     = useState(null);
+  const [sending,  setSending]  = useState(false);
+  const [error,    setError]    = useState('');
 
   async function submit(e) {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() && !imageUrl && !file) return;
     setSending(true);
     setError('');
     try {
-      const post = await apiCreatePost({ content: text.trim() });
+      let finalImageUrl = imageUrl;
+      if (file) {
+        const uploaded = await apiUploadImage(file);
+        finalImageUrl = uploaded.url;
+      }
+      const post = await apiCreatePost({ content: text.trim(), image_url: finalImageUrl });
       onPosted(post);
       onClose();
     } catch (err) {
@@ -136,6 +156,24 @@ function PostComposer({ onClose, onPosted }) {
     } finally {
       setSending(false);
     }
+  }
+
+  function onFileChange(e) {
+    const nextFile = e.target.files?.[0];
+    if (!nextFile) return;
+    if (!IMAGE_TYPES.includes(nextFile.type)) {
+      setError('Usa una imagen JPG, PNG o WebP.');
+      e.target.value = '';
+      return;
+    }
+    if (nextFile.size > MAX_IMAGE_BYTES) {
+      setError('La imagen debe pesar máximo 5 MB.');
+      e.target.value = '';
+      return;
+    }
+    setFile(nextFile);
+    setImageUrl('');
+    setError('');
   }
 
   return (
@@ -150,6 +188,21 @@ function PostComposer({ onClose, onPosted }) {
           onChange={(e) => setText(e.target.value)}
           maxLength={500}
         />
+        {imageUrl && (
+          <div className="mt-3 overflow-hidden rounded-card border border-white/10 bg-aura-bg">
+            <img src={imageUrl} alt="" className="block max-h-[260px] w-full object-contain" />
+          </div>
+        )}
+        <label className="mt-3 flex cursor-pointer items-center justify-between rounded-card border border-white/10 bg-aura-bg px-4 py-3 text-sm text-aura-text-2">
+          <span className="truncate">{file ? file.name : imageUrl ? 'Cambiar imagen' : 'Agregar imagen'}</span>
+          <span className="text-aura-cyan">Elegir</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            onChange={onFileChange}
+          />
+        </label>
         {error && <p className="mt-1 text-xs text-aura-error">{error}</p>}
         <div className="mt-3 flex gap-3">
           <button type="button" onClick={onClose} className="flex-1 rounded-pill border border-white/15 py-3 text-sm text-aura-text-2">
@@ -157,7 +210,7 @@ function PostComposer({ onClose, onPosted }) {
           </button>
           <button
             type="submit"
-            disabled={sending || !text.trim()}
+            disabled={sending || (!text.trim() && !imageUrl && !file)}
             className="flex-[2] rounded-pill bg-aura-cyan py-3 text-sm font-semibold uppercase text-aura-bg disabled:opacity-50"
           >
             {sending ? 'Publicando…' : 'Publicar'}

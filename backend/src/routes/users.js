@@ -20,7 +20,8 @@ router.get('/:id', async (req, res) => {
               END AS relationship
        FROM users u
        LEFT JOIN profiles p ON p.user_id = u.id
-       WHERE u.id = $2`,
+       WHERE u.id = $2
+         AND u.deleted_at IS NULL`,
       [req.user.id, req.params.id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -47,6 +48,7 @@ router.get('/:id/posts', async (req, res) => {
        LEFT JOIN likes l ON l.post_id = p.id
        LEFT JOIN comments c ON c.post_id = p.id
        WHERE p.user_id = $2
+         AND u.deleted_at IS NULL
        GROUP BY p.id, u.id, pr.user_id
        ORDER BY p.created_at DESC
        LIMIT $3`,

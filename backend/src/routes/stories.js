@@ -28,6 +28,7 @@ async function listStories(req, res, scope) {
        JOIN users u ON u.id = s.user_id
        LEFT JOIN profiles p ON p.user_id = s.user_id
        WHERE s.expires_at > NOW()
+       AND u.deleted_at IS NULL
        ${relationWhere}
        ORDER BY s.created_at DESC
        LIMIT $1`,

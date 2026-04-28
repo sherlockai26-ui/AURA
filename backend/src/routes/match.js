@@ -13,6 +13,7 @@ router.get('/candidates', async (req, res) => {
       FROM users u
       JOIN profiles p ON p.user_id = u.id
       WHERE u.id != $1
+        AND u.deleted_at IS NULL
         AND u.id NOT IN (SELECT to_user_id FROM user_likes  WHERE from_user_id = $1)
         AND u.id NOT IN (SELECT to_user_id FROM user_passes WHERE from_user_id = $1)
       ORDER BY RANDOM()
@@ -34,6 +35,15 @@ router.post('/like/:targetUserId', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    const { rows: targetRows } = await client.query(
+      'SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL',
+      [targetId]
+    );
+    if (targetRows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Usuario no disponible.' });
+    }
 
     await client.query(`
       INSERT INTO user_likes (from_user_id, to_user_id) VALUES ($1, $2)
@@ -119,6 +129,12 @@ router.post('/pass/:targetUserId', async (req, res) => {
   if (!targetId || targetId === userId) return res.status(400).json({ error: 'Target inválido.' });
 
   try {
+    const { rows: targetRows } = await pool.query(
+      'SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL',
+      [targetId]
+    );
+    if (targetRows.length === 0) return res.status(404).json({ error: 'Usuario no disponible.' });
+
     await pool.query(`
       INSERT INTO user_passes (from_user_id, to_user_id) VALUES ($1, $2)
       ON CONFLICT DO NOTHING
@@ -152,7 +168,8 @@ router.get('/matches', async (req, res) => {
       FROM matches m
       JOIN users u ON u.id = CASE WHEN m.user1_id = $1 THEN m.user2_id ELSE m.user1_id END
       JOIN profiles p ON p.user_id = u.id
-      WHERE m.user1_id = $1 OR m.user2_id = $1
+      WHERE (m.user1_id = $1 OR m.user2_id = $1)
+        AND u.deleted_at IS NULL
       ORDER BY m.created_at DESC
     `, [userId]);
     res.json(rows);

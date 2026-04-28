@@ -6,7 +6,6 @@ import { apiToggleLike, apiDeletePost } from '../lib/api.js';
 
 export default function PostCard({ post, onDelete }) {
   const session      = useAuthStore((s) => s.session);
-  const viewerHandle = useAuthStore((s) => s.viewerHandle());
 
   const [sparks,  setSparks]  = useState(post.sparks ?? post.likes_count ?? 0);
   const [liked,   setLiked]   = useState(post.likedByMe || false);
@@ -105,23 +104,17 @@ export default function PostCard({ post, onDelete }) {
 
       {/* Media */}
       {post.image_url && (
-        <div
-          className="relative mt-3 w-full overflow-hidden rounded-card bg-black"
-          data-watermark={`${post.handle} · ${viewerHandle}`}
-        >
+        <div className="relative mt-3 w-full max-w-full overflow-hidden rounded-card bg-black">
           <img
             src={resolveMediaUrl(post.image_url)}
             alt=""
-            style={{ display: 'block', width: '100%', maxWidth: '100%', height: 'auto', maxHeight: '520px', objectFit: 'cover' }}
+            className="block h-auto max-h-[420px] w-full max-w-full object-contain md:max-h-[520px]"
           />
           {hide && (
             <div className="absolute inset-0 z-[3] grid place-items-center bg-aura-bg/95 text-aura-text-2 text-xs">
               Contenido oculto temporalmente
             </div>
           )}
-          <span className="absolute bottom-2 right-2 z-[3] flex items-center gap-1 rounded-pill bg-aura-bg/80 px-2 py-1 text-[10px] text-aura-cyan">
-            🪟 Watermark activo
-          </span>
         </div>
       )}
 

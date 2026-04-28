@@ -2,14 +2,14 @@ import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
 import { MemberAvatar, DuoAvatar } from './WhoIsHere.jsx';
+import { apiDeleteMe } from '../lib/api.js';
 
 export default function Profile() {
   const navigate       = useNavigate();
   const session        = useAuthStore((s) => s.session);
-  const account        = useAuthStore((s) => s.accounts[s.session?.email] || null);
+  const storedAccount  = useAuthStore((s) => s.accounts[s.session?.email] || null);
   const sparks         = useAuthStore((s) => s.sparks);
   const logout         = useAuthStore((s) => s.logout);
-  const deleteAccount  = useAuthStore((s) => s.deleteAccount);
   const updatePhoto    = useAuthStore((s) => s.updatePhoto);
   const leaveDuo       = useAuthStore((s) => s.leaveDuo);
   const invitePartner  = useAuthStore((s) => s.invitePartner);
@@ -35,8 +35,17 @@ export default function Profile() {
   const [voteStep,      setVoteStep]       = useState('confirm');
 
   const [error, setError] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
-  if (!account || !session) return null;
+  if (!session) return null;
+
+  const account = storedAccount || {
+    email: session.email,
+    handle: session.handle,
+    mode: session.mode || 'single',
+    members: [{ name: session.display_name || session.handle, handle: session.handle, isAdmin: true }],
+    createdAt: Date.now(),
+  };
 
   const email   = session.email;
   const isDuo   = account.mode === 'duo';
@@ -126,10 +135,18 @@ export default function Profile() {
   }
 
   // ── Eliminar cuenta Single ───────────────────────────────────────────
-  function deleteSingle() {
+  async function deleteSingle() {
     if (deleteConfirm !== 'ELIMINAR') { setError('Escribe ELIMINAR para confirmar.'); return; }
-    deleteAccount(email);
-    navigate('/login', { replace: true });
+    setDeletingAccount(true);
+    setError('');
+    try {
+      await apiDeleteMe();
+      logout();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar la cuenta.');
+      setDeletingAccount(false);
+    }
   }
 
   return (
@@ -394,9 +411,9 @@ export default function Profile() {
               <input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} autoFocus
                 className="mt-1 w-full rounded-card bg-aura-bg px-3 py-2 text-white outline-none border border-white/10 focus:border-aura-error" />
               {error && <p className="mt-2 text-xs text-aura-error">{error}</p>}
-              <button onClick={deleteSingle} disabled={deleteConfirm !== 'ELIMINAR'}
+              <button onClick={deleteSingle} disabled={deleteConfirm !== 'ELIMINAR' || deletingAccount}
                 className="mt-4 w-full rounded-pill bg-aura-error py-3 text-sm font-semibold text-white disabled:opacity-50">
-                Eliminar definitivamente
+                {deletingAccount ? 'Eliminando…' : 'Eliminar definitivamente'}
               </button>
             </ModalCard>
           )}

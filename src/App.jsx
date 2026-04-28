@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Login from './routes/Login.jsx';
 import Register from './routes/Register.jsx';
@@ -27,10 +28,52 @@ import Notificaciones from './routes/Notificaciones.jsx';
 import Legal from './routes/Legal.jsx';
 import Tareas from './routes/Tareas.jsx';
 import { useAuthStore } from './lib/store.js';
+import { apiMe } from './lib/api.js';
 
 function RequireAuth({ children }) {
-  const session = useAuthStore((s) => s.session);
-  return session ? children : <Navigate to="/login" replace />;
+  const session    = useAuthStore((s) => s.session);
+  const setSession = useAuthStore((s) => s.setSession);
+  const logout     = useAuthStore((s) => s.logout);
+  const [checking, setChecking] = useState(Boolean(session));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!session) {
+      setChecking(false);
+      return undefined;
+    }
+
+    setChecking(true);
+    apiMe()
+      .then((me) => {
+        if (cancelled) return;
+        setSession({
+          id: me.id,
+          email: me.email,
+          handle: me.handle,
+          mode: me.mode,
+          display_name: me.display_name,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) logout();
+      })
+      .finally(() => {
+        if (!cancelled) setChecking(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!session && !checking) return <Navigate to="/login" replace />;
+  if (checking) {
+    return (
+      <div className="grid min-h-[100dvh] place-items-center bg-aura-bg text-sm text-aura-text-2">
+        Validando sesión…
+      </div>
+    );
+  }
+  return children;
 }
 
 function RootRedirect() {

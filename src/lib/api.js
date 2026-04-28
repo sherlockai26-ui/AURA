@@ -74,6 +74,10 @@ export async function apiMe() {
   return request('/api/me');
 }
 
+export async function apiDeleteMe() {
+  return request('/api/me', { method: 'DELETE' });
+}
+
 // ── Profile ───────────────────────────────────────────────────────────
 
 export async function apiUpdateProfile({ display_name, bio }) {

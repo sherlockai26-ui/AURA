@@ -1,19 +1,34 @@
 import { useRef, useState } from 'react';
 import { apiUploadImage } from '../lib/api.js';
 
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 export default function StatusBox({ onOpenComposer }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
   async function onFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!IMAGE_TYPES.includes(file.type)) {
+      setError('Usa una imagen JPG, PNG o WebP.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError('La imagen debe pesar máximo 5 MB.');
+      e.target.value = '';
+      return;
+    }
     setUploading(true);
+    setError('');
     try {
       const data = await apiUploadImage(file);
       onOpenComposer(data.url);
     } catch {
-      onOpenComposer();
+      setError('No se pudo subir la imagen.');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -55,10 +70,11 @@ export default function StatusBox({ onOpenComposer }) {
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={onFileChange}
       />
+      {error && <p className="mt-2 text-center text-xs text-aura-error">{error}</p>}
     </section>
   );
 }

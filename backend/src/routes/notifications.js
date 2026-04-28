@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
               p.avatar_url AS actor_avatar,
               msg.conversation_id
        FROM notifications n
-       LEFT JOIN users actor ON actor.id = n.actor_user_id
+       LEFT JOIN users actor ON actor.id = n.actor_user_id AND actor.deleted_at IS NULL
        LEFT JOIN profiles p ON p.user_id = actor.id
        LEFT JOIN messages msg ON n.type = 'message' AND msg.id = n.reference_id
        WHERE n.user_id = $1

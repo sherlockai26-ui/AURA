@@ -42,7 +42,7 @@ router.get('/', requireAuth, async (req, res) => {
        LEFT JOIN profiles pr ON pr.user_id = p.user_id
        LEFT JOIN likes l ON l.post_id = p.id
        LEFT JOIN comments c ON c.post_id = p.id
-       WHERE 1=1 ${where}
+       WHERE u.deleted_at IS NULL ${where}
        GROUP BY p.id, u.id, pr.user_id
        ORDER BY p.created_at DESC
        LIMIT $2`,
@@ -122,6 +122,7 @@ router.get('/:id/comments', requireAuth, async (req, res) => {
        JOIN users u ON u.id = c.user_id
        LEFT JOIN profiles pr ON pr.user_id = c.user_id
        WHERE c.post_id = $1
+         AND u.deleted_at IS NULL
        ORDER BY c.created_at ASC`,
       [req.params.id]
     );

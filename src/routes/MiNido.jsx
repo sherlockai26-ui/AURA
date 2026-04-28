@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
+import { apiDeleteMe } from '../lib/api.js';
 
 const NAV_ITEMS = [
   { icon: '🔒', label: 'Seguridad',           path: '/seguridad' },
@@ -14,8 +15,9 @@ export default function MiNido() {
   const session       = useAuthStore((s) => s.session);
   const profileData   = useAuthStore((s) => s.profileData);
   const logout        = useAuthStore((s) => s.logout);
-  const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
 
   const displayName = profileData?.displayName || session?.email || '—';
   const photoURL    = profileData?.photoURL || null;
@@ -25,10 +27,17 @@ export default function MiNido() {
     navigate('/login', { replace: true });
   }
 
-  function handleDeleteConfirm() {
-    if (session?.email) deleteAccount(session.email);
-    else logout();
-    navigate('/register', { replace: true });
+  async function handleDeleteConfirm() {
+    setDeleting(true);
+    setError('');
+    try {
+      await apiDeleteMe();
+      logout();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar la cuenta.');
+      setDeleting(false);
+    }
   }
 
   return (
@@ -95,6 +104,7 @@ export default function MiNido() {
             <p className="text-center text-sm text-aura-text-2">
               Esta acción no se puede deshacer.
             </p>
+            {error && <p className="text-center text-xs text-aura-error">{error}</p>}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -106,9 +116,10 @@ export default function MiNido() {
               <button
                 type="button"
                 onClick={handleDeleteConfirm}
-                className="flex-1 rounded-full bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition"
+                disabled={deleting}
+                className="flex-1 rounded-full bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-60"
               >
-                Eliminar
+                {deleting ? 'Eliminando…' : 'Eliminar'}
               </button>
             </div>
           </div>

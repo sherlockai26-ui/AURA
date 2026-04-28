@@ -20,6 +20,7 @@ router.get('/conversations', requireAuth, async (req, res) => {
        JOIN conversation_members cm2 ON cm2.conversation_id = c.id AND cm2.user_id <> $1
        JOIN users u ON u.id = cm2.user_id
        LEFT JOIN profiles pr ON pr.user_id = u.id
+       WHERE u.deleted_at IS NULL
        ORDER BY last_message_at DESC NULLS LAST`,
       [req.user.id]
     );
@@ -37,7 +38,10 @@ router.post('/conversations', requireAuth, async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const other = await client.query('SELECT id FROM users WHERE handle = $1', [other_handle]);
+    const other = await client.query(
+      'SELECT id FROM users WHERE handle = $1 AND deleted_at IS NULL',
+      [other_handle]
+    );
     if (other.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado.' });
     const otherId = other.rows[0].id;
     if (otherId === req.user.id) return res.status(400).json({ error: 'No puedes chatear contigo mismo.' });
@@ -83,6 +87,7 @@ router.get('/conversations/:id/messages', requireAuth, async (req, res) => {
        JOIN users u ON u.id = m.user_id
        LEFT JOIN profiles pr ON pr.user_id = m.user_id
        WHERE m.conversation_id = $1
+         AND u.deleted_at IS NULL
        ORDER BY m.created_at ASC`,
       [req.params.id]
     );

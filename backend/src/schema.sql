@@ -4,11 +4,52 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS users (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email         VARCHAR(255) UNIQUE NOT NULL,
-  handle        VARCHAR(50)  UNIQUE NOT NULL,
+  email         VARCHAR(255) NOT NULL,
+  handle        VARCHAR(50)  NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
-  created_at    TIMESTAMPTZ  DEFAULT NOW()
+  created_at    TIMESTAMPTZ  DEFAULT NOW(),
+  deleted_at    TIMESTAMPTZ
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_users_active ON users (id) WHERE deleted_at IS NULL;
+
+DO $$
+DECLARE
+  constraint_name TEXT;
+BEGIN
+  FOR constraint_name IN
+    SELECT c.conname
+    FROM pg_constraint c
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+    WHERE c.conrelid = 'users'::regclass
+      AND c.contype = 'u'
+    GROUP BY c.conname
+    HAVING array_agg(a.attname::text ORDER BY a.attname::text) = ARRAY['email']
+  LOOP
+    EXECUTE format('ALTER TABLE users DROP CONSTRAINT IF EXISTS %I', constraint_name);
+  END LOOP;
+
+  FOR constraint_name IN
+    SELECT c.conname
+    FROM pg_constraint c
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+    WHERE c.conrelid = 'users'::regclass
+      AND c.contype = 'u'
+    GROUP BY c.conname
+    HAVING array_agg(a.attname::text ORDER BY a.attname::text) = ARRAY['handle']
+  LOOP
+    EXECUTE format('ALTER TABLE users DROP CONSTRAINT IF EXISTS %I', constraint_name);
+  END LOOP;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_active_unique
+  ON users (lower(email))
+  WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_handle_active_unique
+  ON users (lower(handle))
+  WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS profiles (
   user_id      UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

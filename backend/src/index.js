@@ -7,7 +7,11 @@ const fs      = require('fs');
 
 const UNSAFE_SECRETS = ['CAMBIA_ESTO_POR_UN_SECRETO_LARGO_Y_ALEATORIO', 'change_this_secret_in_production', ''];
 if (!process.env.JWT_SECRET || UNSAFE_SECRETS.includes(process.env.JWT_SECRET)) {
-  console.error('⚠️  ADVERTENCIA: JWT_SECRET no está configurado o usa el valor por defecto. Cambia JWT_SECRET en tu archivo .env antes de usar en producción.');
+  const message = 'JWT_SECRET no está configurado o usa el valor por defecto. Cambia JWT_SECRET en tu archivo .env antes de usar en producción.';
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(message);
+  }
+  console.error(`ADVERTENCIA: ${message}`);
 }
 
 const app  = express();
