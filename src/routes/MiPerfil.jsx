@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
 import { apiMe, apiGetPublicUserPosts, apiUploadAvatar, apiFetchFriends, apiGetSavedStories } from '../lib/api.js';
@@ -19,7 +19,7 @@ function normalizePost(p) {
   };
 }
 
-const TABS = ['Publicaciones', 'Fotos', 'Amigos', 'Guardadas'];
+const TABS = ['Publicaciones', 'Fotos', 'Conexiones', 'Guardadas'];
 
 export default function MiPerfil() {
   const navigate    = useNavigate();
@@ -29,7 +29,9 @@ export default function MiPerfil() {
   const [posts,     setPosts]     = useState([]);
   const [friends,   setFriends]   = useState([]);
   const [saved,     setSaved]     = useState([]);
-  const [loading,   setLoading]   = useState(true);
+  const [loading,       setLoading]       = useState(true);
+  const [showAvatar,    setShowAvatar]    = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!session) return;
@@ -84,11 +86,24 @@ export default function MiPerfil() {
 
       {/* Avatar + info */}
       <div className="flex flex-col items-center gap-3 pt-6 pb-4 px-4">
-        <label className="relative cursor-pointer group">
-          <img src={avatar} alt="avatar" className="w-24 h-24 rounded-full object-cover border-2 border-aura-cyan/40" />
-          <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition text-xs text-white">Foto</span>
-          <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
-        </label>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => me?.avatar_url ? setShowAvatar(true) : fileInputRef.current?.click()}
+            className="relative rounded-full overflow-hidden cursor-pointer group"
+          >
+            <img src={avatar} alt="avatar" className="w-24 h-24 rounded-full object-cover border-2 border-aura-cyan/40" />
+            {!me?.avatar_url && (
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition text-xs text-white text-center px-2">
+                Agregar foto
+              </span>
+            )}
+          </button>
+          <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-aura-surface border border-white/20 flex items-center justify-center cursor-pointer hover:bg-white/10 transition">
+            <span className="text-xs">📷</span>
+            <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={handleAvatarChange} />
+          </label>
+        </div>
         <div className="text-center">
           <p className="font-bold text-lg">@{me?.handle}</p>
           {me?.display_name && me.display_name !== me.handle && (
@@ -135,17 +150,17 @@ export default function MiPerfil() {
               </div>
         )}
 
-        {tab === 'Amigos' && (
+        {tab === 'Conexiones' && (
           <div className="px-4 py-2">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold">{friends.length} amigos</span>
+              <span className="text-sm font-semibold">{friends.length} conexiones</span>
               <div className="flex gap-2">
                 <button onClick={() => navigate('/solicitudes')} className="text-xs text-aura-cyan hover:underline">Solicitudes</button>
-                <button onClick={() => navigate('/amigos')} className="text-xs text-white/50 hover:underline">Ver todos</button>
+                <button onClick={() => navigate('/amigos')} className="text-xs text-white/50 hover:underline">Ver todas</button>
               </div>
             </div>
             {friends.length === 0
-              ? <p className="text-center text-white/40 text-sm py-8">Aún no tienes amigos en AURA.</p>
+              ? <p className="text-center text-white/40 text-sm py-8">Aún no tienes conexiones en AURA.</p>
               : friends.slice(0, 6).map((f) => <FriendRow key={f.user_id} friend={f} navigate={navigate} />)
             }
           </div>
@@ -172,6 +187,26 @@ export default function MiPerfil() {
           </div>
         )}
       </div>
+
+      {showAvatar && me?.avatar_url && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setShowAvatar(false)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold"
+            onClick={() => setShowAvatar(false)}
+          >
+            ✕
+          </button>
+          <img
+            src={me.avatar_url}
+            alt={me.handle}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,29 @@ const pool        = require('../db');
 
 router.use(requireAuth);
 
+// GET /api/users/search?q=  — ANTES de /:id para evitar colisión de rutas
+router.get('/search', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 1) return res.json([]);
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, u.handle, p.display_name, p.avatar_url, p.bio
+       FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE u.id != $1
+         AND u.deleted_at IS NULL
+         AND (u.handle ILIKE '%' || $2 || '%' OR p.display_name ILIKE '%' || $2 || '%')
+       ORDER BY u.handle
+       LIMIT 20`,
+      [req.user.id, q]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('user search error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -69,6 +92,48 @@ router.get('/:id/posts', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('public user posts error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
+// GET /api/users/:id/friends — lista pública de conexiones
+router.get('/:id/friends', async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, u.handle, p.display_name, p.avatar_url
+       FROM friendships f
+       JOIN users u ON u.id = (CASE WHEN f.requester_id = $1 THEN f.addressee_id ELSE f.requester_id END)
+       LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE f.status = 'accepted'
+         AND ((f.requester_id = $1 AND f.addressee_id = u.id) OR (f.addressee_id = $1 AND f.requester_id = u.id))
+         AND u.deleted_at IS NULL
+       ORDER BY u.handle
+       LIMIT $2`,
+      [req.params.id, limit]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('public user friends error:', err);
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
+// GET /api/users/:id/photos — fotos públicas
+router.get('/:id/photos', async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id, p.image_url, p.created_at
+       FROM posts p
+       WHERE p.user_id = $1 AND p.image_url IS NOT NULL
+       ORDER BY p.created_at DESC
+       LIMIT $2`,
+      [req.params.id, limit]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('public user photos error:', err);
     res.status(500).json({ error: 'Error interno.' });
   }
 });

@@ -6,25 +6,36 @@ router.use(requireAuth);
 
 // POST /api/friends/request
 router.post('/request', async (req, res) => {
-  const { toUserId } = req.body;
+  const { toUserId, message } = req.body;
   if (!toUserId || toUserId === req.user.id) {
     return res.status(400).json({ error: 'Usuario inválido.' });
   }
+  if (!message || typeof message !== 'string' || message.trim().length < 1 || message.trim().length > 40) {
+    return res.status(400).json({ error: 'El mensaje debe tener entre 1 y 40 caracteres.' });
+  }
   try {
     const { rows } = await pool.query(
-      `INSERT INTO friendships (requester_id, addressee_id, status)
-       VALUES ($1, $2, 'pending')
+      `INSERT INTO friendships (requester_id, addressee_id, status, message)
+       VALUES ($1, $2, 'pending', $3)
        ON CONFLICT (requester_id, addressee_id) DO NOTHING
        RETURNING id`,
-      [req.user.id, toUserId]
+      [req.user.id, toUserId, message.trim()]
     );
     if (rows.length === 0) return res.status(409).json({ error: 'Solicitud ya existe.' });
+
+    // Obtener handle del solicitante para la notificación
+    const { rows: senderRows } = await pool.query(
+      `SELECT handle FROM users WHERE id=$1`, [req.user.id]
+    );
+    const senderHandle = senderRows[0]?.handle || 'alguien';
+
     pool.query(
       `INSERT INTO notifications (user_id, actor_user_id, type, reference_id)
-       VALUES ($1, $2, 'friend_request', $3)`,
+       VALUES ($1, $2, 'connection_request', $3)`,
       [toUserId, req.user.id, rows[0].id]
     ).catch(() => {});
-    res.status(201).json({ success: true });
+
+    res.status(201).json({ success: true, message: `@${senderHandle} desea conectar contigo` });
   } catch (err) {
     console.error('friend request error:', err);
     res.status(500).json({ error: 'Error interno.' });
@@ -38,11 +49,24 @@ router.post('/accept', async (req, res) => {
     const { rows } = await pool.query(
       `UPDATE friendships SET status='accepted', updated_at=NOW()
        WHERE id=$1 AND addressee_id=$2 AND status='pending'
-       RETURNING id`,
+       RETURNING id, requester_id`,
       [requestId, req.user.id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Solicitud no encontrada.' });
-    res.json({ success: true });
+
+    // Notificar al solicitante
+    const { rows: acceptorRows } = await pool.query(
+      `SELECT handle FROM users WHERE id=$1`, [req.user.id]
+    );
+    const acceptorHandle = acceptorRows[0]?.handle || 'alguien';
+
+    pool.query(
+      `INSERT INTO notifications (user_id, actor_user_id, type, reference_id)
+       VALUES ($1, $2, 'connection_request', $3)`,
+      [rows[0].requester_id, req.user.id, rows[0].id]
+    ).catch(() => {});
+
+    res.json({ success: true, message: `@${acceptorHandle} aceptó tu conexión` });
   } catch (err) {
     console.error('friend accept error:', err);
     res.status(500).json({ error: 'Error interno.' });
@@ -87,7 +111,7 @@ router.delete('/:userId', async (req, res) => {
 router.get('/requests', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT f.id, f.status, f.created_at,
+      `SELECT f.id, f.status, f.created_at, f.message,
               f.requester_id, f.addressee_id,
               u.handle,
               COALESCE(p.display_name, u.handle) AS display_name,

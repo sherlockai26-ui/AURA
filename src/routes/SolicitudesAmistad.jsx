@@ -5,8 +5,8 @@ import { apiFetchFriendRequests, apiAcceptFriendRequest, apiDeclineFriendRequest
 export default function SolicitudesAmistad() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [acting,   setActing]   = useState(null);
 
   useEffect(() => {
     apiFetchFriendRequests()
@@ -46,7 +46,7 @@ export default function SolicitudesAmistad() {
     <div className="pb-8 text-white">
       <div className="sticky top-0 z-20 flex items-center gap-3 bg-aura-bg/95 px-4 py-3 backdrop-blur-md border-b border-white/5">
         <button onClick={() => navigate(-1)} className="text-lg text-white/50 hover:text-white">←</button>
-        <span className="font-bold">Solicitudes de amistad</span>
+        <span className="font-bold">Solicitudes de Conexión</span>
       </div>
 
       {loading && <p className="text-center text-white/40 text-sm py-12">Cargando…</p>}
@@ -57,28 +57,35 @@ export default function SolicitudesAmistad() {
             <div className="mb-6">
               <p className="text-xs text-white/40 uppercase tracking-widest mb-2">Recibidas ({received.length})</p>
               {received.map(r => (
-                <div key={r.id} className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0">
-                  <Avatar handle={r.handle} avatar_url={r.avatar_url} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">@{r.handle}</p>
-                    {r.display_name && r.display_name !== r.handle && (
-                      <p className="text-xs text-white/50 truncate">{r.display_name}</p>
-                    )}
+                <div key={r.id} className="py-4 border-b border-white/5 last:border-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Avatar handle={r.handle} avatar_url={r.avatar_url} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">@{r.handle}</p>
+                      {r.display_name && r.display_name !== r.handle && (
+                        <p className="text-xs text-white/50 truncate">{r.display_name}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  {r.message && (
+                    <p className="text-xs italic mb-3 px-1" style={{ color: '#B0B0B0' }}>
+                      "{r.message}"
+                    </p>
+                  )}
+                  <div className="flex gap-2">
                     <button
                       onClick={() => accept(r.id)}
                       disabled={acting === r.id}
-                      className="text-xs bg-aura-cyan text-aura-bg font-semibold px-3 py-1.5 rounded-full disabled:opacity-50"
+                      className="flex-1 text-xs bg-aura-cyan text-aura-bg font-semibold px-3 py-2 rounded-full disabled:opacity-50"
                     >
-                      {acting === r.id ? '…' : 'Aceptar'}
+                      {acting === r.id ? '…' : 'Aceptar conexión'}
                     </button>
                     <button
                       onClick={() => decline(r.id)}
                       disabled={acting === r.id}
-                      className="text-xs border border-white/20 text-white/60 px-3 py-1.5 rounded-full disabled:opacity-50"
+                      className="flex-1 text-xs border border-white/20 text-white/70 px-3 py-2 rounded-full disabled:opacity-50"
                     >
-                      Ignorar
+                      Rechazar conexión
                     </button>
                   </div>
                 </div>
@@ -90,12 +97,19 @@ export default function SolicitudesAmistad() {
             <div>
               <p className="text-xs text-white/40 uppercase tracking-widest mb-2">Enviadas ({sent.length})</p>
               {sent.map(r => (
-                <div key={r.id} className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0">
-                  <Avatar handle={r.handle} avatar_url={r.avatar_url} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">@{r.handle}</p>
-                    <p className="text-xs text-white/40">Pendiente</p>
+                <div key={r.id} className="py-3 border-b border-white/5 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <Avatar handle={r.handle} avatar_url={r.avatar_url} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">@{r.handle}</p>
+                      <p className="text-xs text-white/40">Pendiente</p>
+                    </div>
                   </div>
+                  {r.message && (
+                    <p className="text-xs italic mt-1 px-1" style={{ color: '#B0B0B0' }}>
+                      "{r.message}"
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

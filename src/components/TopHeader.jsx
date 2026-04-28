@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../lib/store.js';
 import { DuoAvatar, MemberAvatar } from '../routes/WhoIsHere.jsx';
 import MenuDrawer from './MenuDrawer.jsx';
+import SearchModal from './SearchModal.jsx';
 import { apiGetNotifications } from '../lib/api.js';
 
 export default function TopHeader() {
@@ -10,8 +11,9 @@ export default function TopHeader() {
   const session = useAuthStore((s) => s.session);
   const cachedAccount = useAuthStore((s) => s.accounts[s.session?.email] || null);
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [unread, setUnread] = useState(0);
+  const [menuOpen,   setMenuOpen]   = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [unread,     setUnread]     = useState(0);
 
   useEffect(() => {
     if (!session) {
@@ -88,6 +90,13 @@ export default function TopHeader() {
             <span className="text-sm font-semibold">{sparks}</span>
           </Link>
 
+          <button onClick={() => setSearchOpen(true)} aria-label="Buscar usuarios" className="text-aura-cyan">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+          </button>
+
           <Link to="/notificaciones" aria-label="Notificaciones" className="relative text-aura-cyan">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2H4.5L6 16Z" strokeLinejoin="round" />
@@ -115,6 +124,7 @@ export default function TopHeader() {
       </header>
 
       <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      {searchOpen && <SearchModal onClose={() => setSearchOpen(false)} />}
     </>
   );
 }

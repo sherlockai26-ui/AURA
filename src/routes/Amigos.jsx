@@ -28,7 +28,7 @@ export default function Amigos() {
     <div className="pb-8 text-white">
       <div className="sticky top-0 z-20 flex items-center gap-3 bg-aura-bg/95 px-4 py-3 backdrop-blur-md border-b border-white/5">
         <button onClick={() => navigate(-1)} className="text-lg text-white/50 hover:text-white">←</button>
-        <span className="font-bold">Amigos</span>
+        <span className="font-bold">Conexiones</span>
         {!loading && <span className="ml-auto text-xs text-white/40">{friends.length}</span>}
       </div>
 

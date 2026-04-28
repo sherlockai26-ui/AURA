@@ -310,6 +310,8 @@ CREATE INDEX IF NOT EXISTS idx_teams_2pa2_teammate ON teams_2pa2(teammate_id, st
 
 ALTER TABLE matches ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams_2pa2(id) ON DELETE SET NULL;
 
+ALTER TABLE friendships ADD COLUMN IF NOT EXISTS message VARCHAR(40);
+
 -- Extend notifications type for team_invite
 DO $$
 BEGIN
@@ -321,6 +323,6 @@ BEGIN
   ) THEN
     ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
     ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
-      CHECK (type IN ('match', 'message', 'video_like', 'video_comment', 'friend_request', 'team_invite'));
+      CHECK (type IN ('match', 'message', 'video_like', 'video_comment', 'friend_request', 'team_invite', 'connection_request'));
   END IF;
 END $$;

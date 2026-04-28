@@ -177,6 +177,18 @@ export async function apiGetPublicUserPosts(userId) {
   return request(`/api/users/${userId}/posts`);
 }
 
+export async function apiGetPublicUserFriends(userId) {
+  return request(`/api/users/${userId}/friends`);
+}
+
+export async function apiGetPublicUserPhotos(userId) {
+  return request(`/api/users/${userId}/photos`);
+}
+
+export async function apiSearchUsers(query) {
+  return request(`/api/users/search?q=${encodeURIComponent(query)}`);
+}
+
 // ── Chat ──────────────────────────────────────────────────────────────
 
 export async function apiGetConversations() {
@@ -316,6 +328,10 @@ export async function apiFetchFriendRequests() {
 
 export async function apiSendFriendRequest(toUserId) {
   return request('/api/friends/request', { method: 'POST', body: JSON.stringify({ toUserId }) });
+}
+
+export async function apiRequestConnection(toUserId, message) {
+  return request('/api/friends/request', { method: 'POST', body: JSON.stringify({ toUserId, message }) });
 }
 
 export async function apiAcceptFriendRequest(requestId) {
